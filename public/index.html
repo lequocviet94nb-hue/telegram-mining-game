@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Máy In Tiền AFK</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1015; color: #ffffff; text-align: center;
+    }
+    .box {
+      background: #1b1d28; border-radius: 16px; padding: 20px; margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #2a2d3e;
+    }
+    .balance-title { font-size: 14px; color: #8c93a8; text-transform: uppercase; letter-spacing: 1px; }
+    .balance-val { font-size: 34px; font-weight: 800; color: #00ff88; margin: 10px 0; }
+    .timer-val { font-size: 24px; font-weight: bold; color: #ffb703; margin: 5px 0; }
+    .status-running { color: #00ff88; font-weight: bold; }
+    .status-stopped { color: #ff4757; font-weight: bold; }
+    .btn-charge {
+      background: linear-gradient(135deg, #ff9900, #ff5500); color: #fff; border: none;
+      padding: 16px 24px; font-size: 18px; font-weight: bold; border-radius: 35px;
+      width: 100%; cursor: pointer; box-shadow: 0 4px 15px rgba(255,102,0,0.4);
+    }
+    .btn-charge:active { transform: scale(0.96); }
+    .note { font-size: 13px; color: #8c93a8; margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+  <h2>⚡ MÁY IN TIỀN TỰ ĐỘNG</h2>
+
+  <div class="box">
+    <div class="balance-title">Số Dư Tích Lũy</div>
+    <div id="balance" class="balance-val">$0.000000</div>
+    <div style="font-size: 12px; color: #8c93a8;">Tốc độ: +$0.0000003 / giây</div>
+  </div>
+
+  <div class="box">
+    <div class="balance-title">Nhiên Liệu Hoạt Động</div>
+    <div id="timer" class="timer-val">00h 00m 00s</div>
+    <div id="status" class="status-stopped">Trạng thái: ĐÃ DỪNG</div>
+  </div>
+
+  <button class="btn-charge" onclick="chargeFuel()">⚡ NẠP +10 PHÚT (XEM QUẢNG CÁO)</button>
+  <div class="note">Nạp dồn không giới hạn. Hết giờ máy sẽ ngừng in tiền!</div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    let balance = 0;
+    let fuelExpiresAt = 0;
+    let ratePerSec = 0.0000003;
+
+    async function loadData() {
+      try {
+        const res = await fetch('/api/user-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        });
+        const data = await res.json();
+        if (data.success) {
+          balance = data.balance;
+          fuelExpiresAt = data.fuel_expires_at;
+          ratePerSec = data.rate_per_sec;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    setInterval(() => {
+      const now = Math.floor(Date.now() / 1000);
+      const remaining = Math.max(0, fuelExpiresAt - now);
+
+      if (remaining > 0) {
+        balance += ratePerSec;
+        const h = String(Math.floor(remaining / 3600)).padStart(2, '0');
+        const m = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0');
+        const s = String(remaining % 60).padStart(2, '0');
+
+        document.getElementById('timer').innerText = `${h}h ${m}m ${s}s`;
+        document.getElementById('status').innerText = 'Trạng thái: ĐANG IN TIỀN';
+        document.getElementById('status').className = 'status-running';
+      } else {
+        document.getElementById('timer').innerText = '00h 00m 00s';
+        document.getElementById('status').innerText = 'Trạng thái: HẾT NHIÊN LIỆU (ĐÃ DỪNG)';
+        document.getElementById('status').className = 'status-stopped';
+      }
+      document.getElementById('balance').innerText = `$${balance.toFixed(6)}`;
+    }, 1000);
+
+    async function chargeFuel() {
+      if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+      try {
+        const res = await fetch('/api/create-ad-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        });
+        const data = await res.json();
+
+        if (data.success && data.adUrl) {
+          tg.openLink(data.adUrl);
+
+          setTimeout(loadData, 15000);
+        }
+      } catch (e) {
+        alert("Không thể tải quảng cáo lúc này!");
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
