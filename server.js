@@ -18,7 +18,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Mã phiên bản máy chủ (Tự động cập nhật cho người chơi)
-const SERVER_BUILD_ID = 'monetag_sdk_' + Date.now().toString();
+const SERVER_BUILD_ID = 'maint_' + Date.now().toString();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MONETAG_LINK = process.env.MONETAG_LINK || 'https://alwingulla.com/4/8634884';
@@ -35,13 +35,14 @@ const DB_FILE = path.join(__dirname, 'database.json');
 function loadDB() {
   if (!fs.existsSync(DB_FILE)) {
     fs.writeFileSync(DB_FILE, JSON.stringify({
-      users: {}, sessions: {}, devices: {}, withdrawals: [], admin_id: null
+      users: {}, sessions: {}, devices: {}, withdrawals: [], admin_id: null, is_maintenance: true
     }, null, 2));
   }
   try {
     const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
     if (!data.withdrawals) data.withdrawals = [];
     if (!data.devices) data.devices = {};
+    if (data.is_maintenance === undefined) data.is_maintenance = true;
 
     // Tự động giải phóng các mã cũ hw_ bị trùng lặp phần cứng để mở khóa cho người chơi bị chặn oan
     let cleaned = false;
@@ -57,7 +58,7 @@ function loadDB() {
 
     return data;
   } catch (e) {
-    return { users: {}, sessions: {}, devices: {}, withdrawals: [], admin_id: null };
+    return { users: {}, sessions: {}, devices: {}, withdrawals: [], admin_id: null, is_maintenance: true };
   }
 }
 
@@ -102,6 +103,38 @@ app.post('/api/telegram-webhook', async (req, res) => {
   const chatId = message.chat.id;
   const text = message.text.trim();
 
+  if (text === '/baotri on') {
+    const db = loadDB();
+    db.is_maintenance = true;
+    saveDB(db);
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: '⚙️ <b>ĐÃ BẬT CHẾ ĐỘ BẢO TRÌ!</b>\n\nTất cả người chơi mở game sẽ thấy thông báo bảo trì. Dữ liệu được bảo toàn 100%.',
+        parse_mode: 'HTML'
+      })
+    });
+    return res.sendStatus(200);
+  }
+
+  if (text === '/baotri off') {
+    const db = loadDB();
+    db.is_maintenance = false;
+    saveDB(db);
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: '✅ <b>ĐÃ TẮT BẢO TRÌ!</b>\n\nGame đã mở cửa trở lại cho mọi người chơi bình thường.',
+        parse_mode: 'HTML'
+      })
+    });
+    return res.sendStatus(200);
+  }
+
   if (text === '/admin') {
     const db = loadDB();
     db.admin_id = chatId;
@@ -111,7 +144,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: `✅ <b>ĐÃ XÁC NHẬN BẠN LÀ ADMIN!</b>\n\nTừ nay đơn đổi thưởng và bạn bè đạt 5.000 ads sẽ thông báo về đây.`,
+        text: `✅ <b>ĐÃ XÁC NHẬN BẠN LÀ ADMIN!</b>\n\n- Gõ <code>/baotri on</code> để bật bảo trì.\n- Gõ <code>/baotri off</code> để tắt bảo trì.\n- Đơn đổi thưởng và thông báo bạn bè sẽ gửi về đây.`,
         parse_mode: 'HTML'
       })
     });
@@ -270,7 +303,7 @@ app.post('/api/restore-account', (req, res) => {
   return res.json({ success: true });
 });
 
-// 3. LẤY TRẠNG THÁI TÀI KHOẢN & KIỂM TRA KHÓA THIẾT BỊ
+// 3. LẤY TRẠNG THÁI TÀI KHOẢN & KIỂM TRA BẢO TRÌ & KHÓA THIẾT BỊ
 app.post('/api/user-status', (req, res) => {
   const { initData, deviceId, hardwareFingerprint } = req.body;
   const finalDeviceId = deviceId || hardwareFingerprint;
@@ -281,6 +314,16 @@ app.post('/api/user-status', (req, res) => {
   const tgId = String(tgUser.id);
 
   const db = loadDB();
+
+  // KIỂM TRA BẢO TRÌ HỆ THỐNG (ADMIN ĐƯỢC PHÉP TRUY CẬP)
+  const isAdmin = (db.admin_id && String(db.admin_id) === tgId);
+  if (db.is_maintenance !== false && !isAdmin) {
+    return res.json({
+      success: false,
+      maintenance: true,
+      error: 'Hệ thống đang bảo trì nâng cấp'
+    });
+  }
 
   // KIỂM TRA KHÓA THIẾT BỊ: Nếu máy này đã bị tài khoản khác chiếm giữ
   if (finalDeviceId && db.devices && db.devices[finalDeviceId]) {
@@ -323,7 +366,7 @@ app.post('/api/user-status', (req, res) => {
   return res.json({
     success: true,
     is_registered: true,
-    is_admin: (db.admin_id && String(db.admin_id) === tgId),
+    is_admin: isAdmin,
     user: {
       telegram_id: user.telegram_id,
       username: user.username,
