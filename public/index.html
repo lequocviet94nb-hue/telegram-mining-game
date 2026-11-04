@@ -25,13 +25,13 @@
     .status-stopped { color: #ff4757; font-weight: bold; }
     .btn-charge {
       background: linear-gradient(135deg, #ff9900, #ff5500); color: #fff; border: none;
-      padding: 16px 24px; font-size: 18px; font-weight: bold; border-radius: 35px;
+      padding: 16px 20px; font-size: 17px; font-weight: bold; border-radius: 35px;
       width: 100%; cursor: pointer; box-shadow: 0 4px 15px rgba(255,102,0,0.4);
     }
     .btn-charge:active { transform: scale(0.96); }
     .note { font-size: 13px; color: #8c93a8; margin-top: 15px; }
 
-    /* KHUNG QUẢNG CÁO NỘI BỘ (KHÔNG THOÁT GAME) */
+    /* KHUNG QUẢNG CÁO NỘI BỘ */
     #ad-modal {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: #000; z-index: 99999; flex-direction: column;
@@ -40,14 +40,18 @@
       height: 55px; background: #1a1b26; display: flex; align-items: center;
       justify-content: space-between; padding: 0 15px; border-bottom: 2px solid #2a2d3e;
     }
-    .ad-title { font-size: 14px; color: #8c93a8; font-weight: bold; }
+    .ad-title { font-size: 14px; color: #00ff88; font-weight: bold; }
     .ad-timer-badge {
-      background: #ffaa00; color: #000; padding: 5px 12px;
+      background: #ffaa00; color: #000; padding: 6px 12px;
       border-radius: 20px; font-weight: bold; font-size: 13px;
+    }
+    .btn-next-ad {
+      display: none; background: #ffaa00; color: #000; border: none;
+      padding: 8px 16px; font-weight: bold; font-size: 13px; border-radius: 20px; cursor: pointer;
     }
     .btn-close-ad {
       display: none; background: #00ff88; color: #000; border: none;
-      padding: 8px 16px; font-weight: bold; font-size: 14px;
+      padding: 8px 16px; font-weight: bold; font-size: 13px;
       border-radius: 20px; cursor: pointer; animation: pulse 1s infinite alternate;
     }
     @keyframes pulse {
@@ -74,17 +78,18 @@
 </head>
 <body>
 
-  <!-- KHUNG QUẢNG CÁO NỘI BỘ (FULL MÀN HÌNH BÊN TRONG TELEGRAM) -->
+  <!-- KHUNG QUẢNG CÁO NỘI BỘ (2 QUẢNG CÁO LIÊN TIẾP) -->
   <div id="ad-modal">
     <div id="ad-top-bar">
-      <div class="ad-title">📺 QUẢNG CÁO TÀI TRỢ</div>
+      <div id="ad-title" class="ad-title">📺 QUẢNG CÁO (1/2)</div>
       <div id="ad-countdown" class="ad-timer-badge">⏳ Chờ: 15s</div>
-      <button id="ad-close-btn" class="btn-close-ad" onclick="closeAdAndClaim()">✕ ĐÓNG & NHẬN THƯỞNG</button>
+      <button id="ad-next-btn" class="btn-next-ad" onclick="loadSecondAd()">⏩ XEM TIẾP QUẢNG CÁO (2/2)</button>
+      <button id="ad-close-btn" class="btn-close-ad" onclick="finishAllAdsAndClaim()">✕ ĐÓNG & NHẬN THƯỞNG</button>
     </div>
     <iframe id="ad-iframe" src="about:blank"></iframe>
   </div>
 
-  <!-- MÀN HÌNH ĐĂNG KÝ TÀI KHOẢN -->
+  <!-- MÀN HÌNH ĐĂNG KÝ -->
   <div id="register-screen">
     <h2>📝 TẠO TÀI KHOẢN MỚI</h2>
     <p style="color: #8c93a8; font-size: 14px;">Tạo tài khoản để lưu trữ tiền VNĐ và số phút nhiên liệu của bạn.</p>
@@ -120,8 +125,8 @@
       <div id="status" class="status-stopped">Trạng thái: ĐÃ DỪNG</div>
     </div>
 
-    <button id="btn-charge" class="btn-charge" onclick="chargeFuel()">⚡ NẠP +10 PHÚT (XEM QUẢNG CÁO)</button>
-    <div class="note">Nạp dồn không giới hạn. Xem hết 15s bấm dấu ✕ để nhận thưởng!</div>
+    <button id="btn-charge" class="btn-charge" onclick="startDoubleAd()">⚡ NẠP +10 PHÚT (XEM 2 QUẢNG CÁO LIỀN)</button>
+    <div class="note">Xem liên tiếp 2 quảng cáo (mỗi quảng cáo 15s) ➔ Bấm dấu ✕ nhận +10 phút!</div>
   </div>
 
   <script>
@@ -131,14 +136,14 @@
     let balance = 0;
     let fuelExpiresAt = 0;
     let ratePerSec = 0.01;
-    let activeClickId = null;
-    let adInterval = null;
+    let currentSessionId = null;
+    let timerInterval = null;
 
     function formatVND(amount) {
       return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
     }
 
-    // 1. Kiểm tra trạng thái tài khoản
+    // 1. Kiểm tra tài khoản
     async function loadData() {
       try {
         const res = await fetch('/api/user-status', {
@@ -166,7 +171,7 @@
       }
     }
 
-    // 2. Xử lý Đăng ký tài khoản
+    // 2. Đăng ký tài khoản
     async function handleRegister() {
       const username = document.getElementById('reg-username').value;
       const pin = document.getElementById('reg-pin').value;
@@ -199,7 +204,7 @@
       }
     }
 
-    // 3. Tăng tiền và đếm ngược thời gian
+    // 3. Tăng tiền mỗi giây
     setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       const remaining = Math.max(0, fuelExpiresAt - now);
@@ -221,12 +226,12 @@
       document.getElementById('balance').innerText = formatVND(balance);
     }, 1000);
 
-    // 4. MỞ QUẢNG CÁO NGAY TRONG GIAO DIỆN (KHÔNG THOÁT GAME)
-    async function chargeFuel() {
+    // 4. BẮT ĐẦU XEM QUẢNG CÁO 1/2
+    async function startDoubleAd() {
       if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
       try {
-        const res = await fetch('/api/create-ad-session', {
+        const res = await fetch('/api/start-ad-1', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ initData: tg.initData })
@@ -234,35 +239,36 @@
         const data = await res.json();
 
         if (data.success && data.adUrl) {
-          activeClickId = data.clickId;
+          currentSessionId = data.sessionId;
 
-          // Mở màn hình quảng cáo nội bộ
           const modal = document.getElementById('ad-modal');
           const iframe = document.getElementById('ad-iframe');
+          const title = document.getElementById('ad-title');
           const countdown = document.getElementById('ad-countdown');
+          const nextBtn = document.getElementById('ad-next-btn');
           const closeBtn = document.getElementById('ad-close-btn');
 
           modal.style.display = 'flex';
+          title.innerText = "📺 QUẢNG CÁO (1/2)";
           countdown.style.display = 'inline-block';
+          nextBtn.style.display = 'none';
           closeBtn.style.display = 'none';
 
-          // Tải link quảng cáo vào iframe
           iframe.src = data.adUrl;
 
-          // Bắt đầu đếm ngược 15 giây
+          // Đếm ngược 15 giây cho quảng cáo 1
           let timeLeft = 15;
           countdown.innerText = `⏳ Chờ: ${timeLeft}s`;
 
-          if (adInterval) clearInterval(adInterval);
-          adInterval = setInterval(() => {
+          if (timerInterval) clearInterval(timerInterval);
+          timerInterval = setInterval(() => {
             timeLeft--;
             if (timeLeft > 0) {
               countdown.innerText = `⏳ Chờ: ${timeLeft}s`;
             } else {
-              clearInterval(adInterval);
-              // Hết 15 giây: Ẩn đồng hồ và HIỆN NÚT 'X'
+              clearInterval(timerInterval);
               countdown.style.display = 'none';
-              closeBtn.style.display = 'inline-block';
+              nextBtn.style.display = 'inline-block'; // Hiện nút chuyển sang video 2
               if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             }
           }, 1000);
@@ -274,31 +280,80 @@
       }
     }
 
-    // 5. NGƯỜI CHƠI BẤM NÚT 'X' ĐỂ ĐÓNG VÀ NHẬN THƯỞNG
-    async function closeAdAndClaim() {
-      const modal = document.getElementById('ad-modal');
+    // 5. CHUYỂN TIẾP SANG QUẢNG CÁO 2/2
+    async function loadSecondAd() {
+      const title = document.getElementById('ad-title');
+      const countdown = document.getElementById('ad-countdown');
+      const nextBtn = document.getElementById('ad-next-btn');
+      const closeBtn = document.getElementById('ad-close-btn');
       const iframe = document.getElementById('ad-iframe');
 
-      // Tắt màn hình quảng cáo và dọn dẹp
-      modal.style.display = 'none';
-      iframe.src = 'about:blank';
-
-      if (!activeClickId) return;
+      nextBtn.style.display = 'none';
+      countdown.style.display = 'inline-block';
+      title.innerText = "📺 QUẢNG CÁO (2/2)";
 
       try {
-        const res = await fetch('/api/claim-reward', {
+        const res = await fetch('/api/start-ad-2', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             initData: tg.initData,
-            clickId: activeClickId
+            sessionId: currentSessionId
+          })
+        });
+        const data = await res.json();
+
+        if (data.success && data.adUrl) {
+          iframe.src = data.adUrl; // Tải quảng cáo thứ 2
+
+          // Đếm ngược 15 giây cho quảng cáo 2
+          let timeLeft = 15;
+          countdown.innerText = `⏳ Chờ: ${timeLeft}s`;
+
+          if (timerInterval) clearInterval(timerInterval);
+          timerInterval = setInterval(() => {
+            timeLeft--;
+            if (timeLeft > 0) {
+              countdown.innerText = `⏳ Chờ: ${timeLeft}s`;
+            } else {
+              clearInterval(timerInterval);
+              countdown.style.display = 'none';
+              closeBtn.style.display = 'inline-block'; // HIỆN NÚT DẤU 'X' NHẬN THƯỞNG
+              if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            }
+          }, 1000);
+        } else {
+          alert(data.error || "Lỗi tải quảng cáo 2!");
+        }
+      } catch (e) {
+        alert("Lỗi kết nối!");
+      }
+    }
+
+    // 6. BẤM DẤU 'X' SAU KHI XONG 2 QUẢNG CÁO ĐỂ NHẬN THƯỞNG
+    async function finishAllAdsAndClaim() {
+      const modal = document.getElementById('ad-modal');
+      const iframe = document.getElementById('ad-iframe');
+
+      modal.style.display = 'none';
+      iframe.src = 'about:blank';
+
+      if (!currentSessionId) return;
+
+      try {
+        const res = await fetch('/api/claim-reward-double', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData: tg.initData,
+            sessionId: currentSessionId
           })
         });
         const result = await res.json();
 
         if (result.success) {
           if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-          alert("🎉 NẠP THÀNH CÔNG! Bạn đã xem hết quảng cáo và nhận +10 phút nhiên liệu.");
+          alert("🎉 XUẤT SẮC! Bạn đã xem đủ 2 quảng cáo và nhận +10 phút nhiên liệu!");
           loadData();
         } else {
           alert("❌ " + (result.message || "Chưa đủ điều kiện nhận thưởng!"));
@@ -306,7 +361,7 @@
       } catch (e) {
         alert("Lỗi nhận thưởng!");
       } finally {
-        activeClickId = null;
+        currentSessionId = null;
       }
     }
 
