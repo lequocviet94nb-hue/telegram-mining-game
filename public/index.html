@@ -10,54 +10,41 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
-      margin: 0; padding: 15px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0; padding: 15px; padding-bottom: 80px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0f1015; color: #ffffff; text-align: center;
     }
     #update-banner {
       display: none; background: #00ff88; color: #000; padding: 10px; font-weight: bold;
-      border-radius: 10px; margin-bottom: 15px; font-size: 13px; animation: pulse 1s infinite alternate;
+      border-radius: 10px; margin-bottom: 15px; font-size: 13px;
     }
     .box {
       background: #1b1d28; border-radius: 16px; padding: 18px; margin-bottom: 15px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #2a2d3e;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #2a2d3e; text-align: left;
     }
     .user-tag {
       background: #2a2d3e; display: inline-block; padding: 6px 14px;
       border-radius: 20px; font-size: 13px; color: #00ff88; margin-bottom: 12px;
     }
-    .balance-title { font-size: 13px; color: #8c93a8; text-transform: uppercase; letter-spacing: 1px; }
-    .balance-val { font-size: 34px; font-weight: 800; color: #00ff88; margin: 8px 0; }
-    .timer-val { font-size: 22px; font-weight: bold; color: #ffb703; margin: 4px 0; }
-    .status-running { color: #00ff88; font-weight: bold; }
-    .status-stopped { color: #ff4757; font-weight: bold; }
+    .balance-title { font-size: 13px; color: #8c93a8; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+    .balance-val { font-size: 34px; font-weight: 800; color: #00ff88; margin: 8px 0; text-align: center; }
+    .timer-val { font-size: 22px; font-weight: bold; color: #ffb703; margin: 4px 0; text-align: center; }
+    .status-running { color: #00ff88; font-weight: bold; text-align: center; }
+    .status-stopped { color: #ff4757; font-weight: bold; text-align: center; }
 
     .btn-action {
       border: none; padding: 16px; font-size: 16px; font-weight: bold; border-radius: 25px;
       width: 100%; cursor: pointer; margin-bottom: 12px; transition: transform 0.1s;
     }
     .btn-action:active { transform: scale(0.97); }
-    .btn-cash {
-      background: linear-gradient(135deg, #00ff88, #00b894); color: #000;
-      box-shadow: 0 4px 15px rgba(0,255,136,0.3);
-    }
-    .btn-fuel {
-      background: linear-gradient(135deg, #ff9900, #ff5500); color: #fff;
-      box-shadow: 0 4px 15px rgba(255,102,0,0.3);
-    }
+    .btn-cash { background: linear-gradient(135deg, #00ff88, #00b894); color: #000; }
+    .btn-fuel { background: linear-gradient(135deg, #ff9900, #ff5500); color: #fff; }
 
     .auto-guide {
       background: rgba(255, 170, 0, 0.1); border: 1px dashed #ffaa00;
       border-radius: 12px; padding: 12px; margin-top: 15px; text-align: left; font-size: 12px; color: #ffdd99;
     }
-    .auto-guide b { color: #ffaa00; }
 
-    /* Màn hình khóa thiết bị */
-    #blocked-screen {
-      display: none; padding: 30px 15px; background: #1e1318; border: 1px solid #ff4757;
-      border-radius: 16px; margin-top: 30px;
-    }
-
-    /* Màn hình xem quảng cáo nội bộ */
+    /* MÀN HÌNH QUẢNG CÁO NỘI BỘ */
     #ad-modal {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: #000; z-index: 99999; flex-direction: column;
@@ -67,109 +54,199 @@
       justify-content: space-between; padding: 0 15px; border-bottom: 2px solid #2a2d3e;
     }
     .ad-title { font-size: 14px; color: #00ff88; font-weight: bold; }
-    .ad-timer-badge {
-      background: #ffaa00; color: #000; padding: 6px 12px;
-      border-radius: 20px; font-weight: bold; font-size: 13px;
-    }
-    .btn-next-ad {
-      display: none; background: #ffaa00; color: #000; border: none;
-      padding: 8px 16px; font-weight: bold; font-size: 13px; border-radius: 20px; cursor: pointer;
-    }
-    .btn-close-ad {
-      display: none; background: #00ff88; color: #000; border: none;
-      padding: 8px 16px; font-weight: bold; font-size: 13px;
-      border-radius: 20px; cursor: pointer; animation: pulse 1s infinite alternate;
-    }
-    @keyframes pulse {
-      from { transform: scale(1); box-shadow: 0 0 5px #00ff88; }
-      to { transform: scale(1.05); box-shadow: 0 0 15px #00ff88; }
-    }
+    .ad-timer-badge { background: #ffaa00; color: #000; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 13px; }
+    .btn-next-ad { display: none; background: #ffaa00; color: #000; border: none; padding: 8px 16px; font-weight: bold; border-radius: 20px; cursor: pointer; }
+    .btn-close-ad { display: none; background: #00ff88; color: #000; border: none; padding: 8px 16px; font-weight: bold; border-radius: 20px; cursor: pointer; }
     #ad-iframe { width: 100%; flex: 1; border: none; background: #fff; }
 
-    /* Form Đăng ký */
-    #register-screen { display: none; }
-    .input-group { text-align: left; margin-bottom: 15px; }
-    .input-group label { display: block; font-size: 13px; color: #8c93a8; margin-bottom: 5px; }
+    /* Form Nhập */
+    .input-group { margin-bottom: 14px; }
+    .input-group label { display: block; font-size: 13px; color: #8c93a8; margin-bottom: 6px; }
     .input-field {
-      width: 100%; box-sizing: border-box; padding: 14px; border-radius: 12px;
-      background: #12131a; border: 1px solid #2a2d3e; color: #fff; font-size: 16px;
+      width: 100%; box-sizing: border-box; padding: 13px; border-radius: 12px;
+      background: #12131a; border: 1px solid #2a2d3e; color: #fff; font-size: 15px;
     }
-    .btn-register {
+    .btn-submit {
       background: linear-gradient(135deg, #00ff88, #00b894); color: #000; border: none;
-      padding: 16px; font-size: 18px; font-weight: bold; border-radius: 35px; width: 100%; cursor: pointer;
+      padding: 15px; font-size: 16px; font-weight: bold; border-radius: 25px; width: 100%; cursor: pointer;
     }
+
+    /* THANH ĐIỀU HƯỚNG TAB Ở DƯỚI CÙNG */
+    .tab-bar {
+      position: fixed; bottom: 0; left: 0; width: 100%; height: 65px;
+      background: #181924; border-top: 1px solid #2a2d3e; display: flex;
+      justify-content: space-around; align-items: center; z-index: 1000;
+    }
+    .tab-item {
+      color: #8c93a8; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; align-items: center;
+    }
+    .tab-item.active { color: #00ff88; font-weight: bold; }
+    .tab-icon { font-size: 20px; margin-bottom: 3px; }
+
+    /* Tiến trình bạn bè */
+    .friend-item {
+      background: #12131a; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #2a2d3e;
+    }
+    .progress-bar {
+      width: 100%; height: 8px; background: #2a2d3e; border-radius: 4px; overflow: hidden; margin-top: 6px;
+    }
+    .progress-fill { height: 100%; background: #00ff88; width: 0%; }
   </style>
 </head>
 <body>
 
-  <!-- BANNER TỰ ĐỘNG CẬP NHẬT -->
   <div id="update-banner">🔄 Đang cập nhật phiên bản mới nhất...</div>
-
-  <!-- MÀN HÌNH KHÓA (KHI DÙNG CLONE TRÊN CÙNG THIẾT BỊ) -->
-  <div id="blocked-screen">
-    <h2 style="color: #ff4757;">⛔ TRUY CẬP BỊ TỪ CHỐI</h2>
-    <p id="blocked-msg" style="color: #ccc; font-size: 14px; line-height: 1.6;">
-      Mỗi thiết bị chỉ được phép sử dụng duy nhất 1 tài khoản để đảm bảo tính công bằng.
-    </p>
-  </div>
 
   <!-- MÀN HÌNH QUẢNG CÁO NỘI BỘ -->
   <div id="ad-modal">
     <div id="ad-top-bar">
       <div id="ad-title" class="ad-title">📺 QUẢNG CÁO (1/2)</div>
       <div id="ad-countdown" class="ad-timer-badge">⏳ Chờ: 15s</div>
-      <button id="ad-next-btn" class="btn-next-ad" onclick="loadSecondAd()">⏩ XEM TIẾP QUẢNG CÁO (2/2)</button>
+      <button id="ad-next-btn" class="btn-next-ad" onclick="loadSecondAd()">⏩ XEM TIẾP (2/2)</button>
       <button id="ad-close-btn" class="btn-close-ad" onclick="finishAllAdsAndClaim()">✕ ĐÓNG & NHẬN THƯỞNG</button>
     </div>
     <iframe id="ad-iframe" src="about:blank"></iframe>
   </div>
 
-  <!-- MÀN HÌNH ĐĂNG KÝ -->
-  <div id="register-screen">
+  <!-- 1. MÀN HÌNH ĐĂNG KÝ -->
+  <div id="register-screen" style="display: none;">
     <h2>📝 TẠO TÀI KHOẢN MỚI</h2>
     <p style="color: #8c93a8; font-size: 14px;">Tài khoản sẽ được liên kết vĩnh viễn với thiết bị này.</p>
-
     <div class="box">
       <div class="input-group">
         <label>Tên tài khoản / Nickname:</label>
         <input type="text" id="reg-username" class="input-field" placeholder="Ví dụ: DaiGia_2026">
       </div>
       <div class="input-group">
-        <label>Mã PIN rút tiền (4-6 số):</label>
-        <input type="password" id="reg-pin" class="input-field" placeholder="Nhập mã PIN bảo mật">
+        <label>Mã PIN bảo mật rút tiền (4-6 số):</label>
+        <input type="password" id="reg-pin" class="input-field" placeholder="Nhập mã PIN bí mật">
       </div>
-      <button class="btn-register" onclick="handleRegister()">XÁC NHẬN TẠO TÀI KHOẢN</button>
+      <button class="btn-submit" onclick="handleRegister()">XÁC NHẬN TẠO TÀI KHOẢN</button>
     </div>
   </div>
 
-  <!-- MÀN HÌNH GAME CHÍNH -->
-  <div id="game-screen" style="display: none;">
-    <div id="user-display" class="user-tag">👤 Tài khoản: Đang tải...</div>
+  <!-- 2. NỘI DUNG GAME (HIỆN KHI ĐÃ CÓ TÀI KHOẢN) -->
+  <div id="main-content" style="display: none;">
+    <div id="user-display" class="user-tag">👤 Đang tải...</div>
 
-    <div class="box">
-      <div class="balance-title">Số Dư Hiện Tại</div>
-      <div id="balance" class="balance-val">0.00 VNĐ</div>
-      <div style="font-size: 12px; color: #8c93a8;">Tốc độ máy in: +0.01 VNĐ / giây</div>
+    <!-- TAB 1: MÁY IN TIỀN -->
+    <div id="tab-mining">
+      <div class="box">
+        <div class="balance-title">Số Dư Khả Dụng</div>
+        <div id="balance" class="balance-val">0.00 VNĐ</div>
+        <div style="font-size: 12px; color: #8c93a8; text-align: center;">Tốc độ máy in: +0.01 VNĐ / giây</div>
+      </div>
+
+      <div class="box">
+        <div class="balance-title">Nhiên Liệu Máy In</div>
+        <div id="timer" class="timer-val">00h 00m 00s</div>
+        <div id="status" class="status-stopped">Trạng thái: ĐÃ DỪNG</div>
+      </div>
+
+      <button class="btn-action btn-cash" onclick="startDoubleAd('CASH')">
+        💰 XEM 2 ADS = NHẬN NGAY +2.00 VNĐ
+      </button>
+
+      <button class="btn-action btn-fuel" onclick="startDoubleAd('FUEL')">
+        ⚡ XEM 2 ADS = NẠP +10 PHÚT NHIÊN LIỆU
+      </button>
+
+      <div class="auto-guide">
+        <b>💡 MẸO TREO MÁY RẢNH TAY (AUTO CLICK):</b><br>
+        • Cài đặt app <b>Auto Clicker</b> hẹn giờ <b>16 giây/click</b> vào các nút để máy tự cày tiền 24/24!
+      </div>
     </div>
 
-    <div class="box">
-      <div class="balance-title">Nhiên Liệu Máy In</div>
-      <div id="timer" class="timer-val">00h 00m 00s</div>
-      <div id="status" class="status-stopped">Trạng thái: ĐÃ DỪNG</div>
+    <!-- TAB 2: GIỚI THIỆU BẠN BÈ -->
+    <div id="tab-referral" style="display: none;">
+      <div class="box">
+        <h3 style="margin-top: 0; color: #ffaa00;">🎁 MỜI BẠN - NHẬN 10.000 VNĐ</h3>
+        <p style="font-size: 13px; color: #ccc; line-height: 1.5;">
+          Mời 1 người chơi hoàn thành <b>5.000 quảng cáo</b> ➔ Nhận ngay <b>10.000 VNĐ</b> chuyển khoản trực tiếp từ Admin (không cộng vào game)!
+        </p>
+        <div class="input-group">
+          <label>Link giới thiệu của bạn:</label>
+          <input type="text" id="ref-link-input" class="input-field" readonly style="color: #00ff88; font-size: 12px;">
+        </div>
+        <button class="btn-submit" onclick="copyRefLink()">📋 SAO CHÉP LINK MỜI</button>
+      </div>
+
+      <div class="box">
+        <h4 style="margin-top: 0;">👥 BẠN BÈ ĐÃ MỜI (<span id="ref-count">0</span>)</h4>
+        <div id="ref-list" style="font-size: 13px; color: #8c93a8;">Chưa có ai đăng ký qua link của bạn.</div>
+      </div>
     </div>
 
-    <button class="btn-action btn-cash" onclick="startDoubleAd('CASH')">
-      💰 XEM 2 ADS = NHẬN NGAY +2.00 VNĐ
-    </button>
+    <!-- TAB 3: RÚT TIỀN -->
+    <div id="tab-withdraw" style="display: none;">
+      <div class="box">
+        <h3 style="margin-top: 0; color: #00ff88; text-align: center;">💳 RÚT TIỀN VỀ TÀI KHOẢN</h3>
+        <p style="font-size: 12px; color: #8c93a8; text-align: center;">Số dư: <b id="withdraw-available-bal" style="color: #00ff88;">0.00 VNĐ</b></p>
 
-    <button class="btn-action btn-fuel" onclick="startDoubleAd('FUEL')">
-      ⚡ XEM 2 ADS = NẠP +10 PHÚT NHIÊN LIỆU
-    </button>
+        <div class="input-group">
+          <label>Số tiền muốn rút (VNĐ):</label>
+          <input type="number" id="wd-amount" class="input-field" placeholder="Tối thiểu 1.000 VNĐ">
+        </div>
 
-    <div class="auto-guide">
-      <b>💡 MẸO TREO MÁY RẢNH TAY (AUTO CLICK):</b><br>
-      • Bạn có thể tải app <b>Auto Clicker</b> trên CH Play/App Store để cắm máy kiếm tiền tự động 24/24.<br>
-      • <b>Cài đặt:</b> Đặt vị trí click vào 2 nút xem và nút dấu [✕], chỉnh thời gian chờ giữa các lần click là <b>16 giây</b> để hệ thống kịp xác nhận thưởng nhé!
+        <div class="input-group">
+          <label>Phương thức rút tiền:</label>
+          <select id="wd-method" class="input-field" onchange="toggleBankSelect()">
+            <option value="MOMO">Ví MoMo</option>
+            <option value="ZALOPAY">Ví ZaloPay</option>
+            <option value="NGAN_HANG">Ngân Hàng Nội Địa</option>
+          </select>
+        </div>
+
+        <div id="bank-select-group" class="input-group" style="display: none;">
+          <label>Chọn Ngân Hàng:</label>
+          <select id="wd-bank-name" class="input-field">
+            <option value="Vietcombank">Vietcombank</option>
+            <option value="MBBank">MB Bank (Quân Đội)</option>
+            <option value="Techcombank">Techcombank</option>
+            <option value="ACB">ACB</option>
+            <option value="BIDV">BIDV</option>
+            <option value="Agribank">Agribank</option>
+            <option value="VietinBank">VietinBank</option>
+            <option value="VPBank">VPBank</option>
+            <option value="TPBank">TPBank</option>
+            <option value="Sacombank">Sacombank</option>
+            <option value="VIB">VIB</option>
+            <option value="HDBank">HDBank</option>
+            <option value="OCB">OCB</option>
+            <option value="SHB">SHB</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label id="account-label">Số điện thoại MoMo:</label>
+          <input type="text" id="wd-account-number" class="input-field" placeholder="Nhập số tài khoản hoặc SĐT">
+        </div>
+
+        <div class="input-group">
+          <label>Tên chủ tài khoản (Viết hoa không dấu):</label>
+          <input type="text" id="wd-account-name" class="input-field" placeholder="Ví dụ: NGUYEN VAN A">
+        </div>
+
+        <div class="input-group">
+          <label>Mã PIN bảo mật rút tiền:</label>
+          <input type="password" id="wd-pin" class="input-field" placeholder="Nhập mã PIN đã tạo lúc đăng ký">
+        </div>
+
+        <button class="btn-submit" onclick="handleWithdraw()">XÁC NHẬN RÚT TIỀN</button>
+      </div>
+    </div>
+
+    <!-- THANH MENU TAB Ở DƯỚI CÙNG -->
+    <div class="tab-bar">
+      <div id="tab-btn-1" class="tab-item active" onclick="switchTab(1)">
+        <span class="tab-icon">⚡</span> Máy In Tiền
+      </div>
+      <div id="tab-btn-2" class="tab-item" onclick="switchTab(2)">
+        <span class="tab-icon">👥</span> Bạn Bè
+      </div>
+      <div id="tab-btn-3" class="tab-item" onclick="switchTab(3)">
+        <span class="tab-icon">💳</span> Rút Tiền
+      </div>
     </div>
   </div>
 
@@ -177,7 +254,6 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // 1. TẠO MÃ ĐỊNH DANH THIẾT BỊ DUY NHẤT (DEVICE ID)
     let deviceId = localStorage.getItem('app_device_id');
     if (!deviceId) {
       deviceId = 'dev_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -190,123 +266,117 @@
     let currentSessionId = null;
     let timerInterval = null;
     let currentAppVersion = null;
-
-    // Tự động kiểm tra bản cập nhật mới
-    async function checkVersionAndUpdate() {
-      try {
-        const res = await fetch('/api/version?t=' + Date.now());
-        const data = await res.json();
-        if (data.version) {
-          if (currentAppVersion === null) {
-            currentAppVersion = data.version;
-          } else if (currentAppVersion !== data.version) {
-            document.getElementById('update-banner').style.display = 'block';
-            setTimeout(() => window.location.reload(true), 1500);
-          }
-        }
-      } catch (e) {}
-    }
-    setInterval(checkVersionAndUpdate, 20000);
-    checkVersionAndUpdate();
+    let userTelegramId = null;
 
     function formatVND(amount) {
       return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
     }
 
-    // Sao lưu dữ liệu vào Đám Mây Telegram (Chống mất dữ liệu)
-    function saveToCloud(userData) {
-      if (tg.CloudStorage) {
-        tg.CloudStorage.setItem('cloud_backup_user', JSON.stringify(userData), (err, res) => {});
+    // Chuyển đổi giữa các Tab
+    function switchTab(tabIndex) {
+      document.getElementById('tab-mining').style.display = tabIndex === 1 ? 'block' : 'none';
+      document.getElementById('tab-referral').style.display = tabIndex === 2 ? 'block' : 'none';
+      document.getElementById('tab-withdraw').style.display = tabIndex === 3 ? 'block' : 'none';
+
+      document.getElementById('tab-btn-1').className = 'tab-item' + (tabIndex === 1 ? ' active' : '');
+      document.getElementById('tab-btn-2').className = 'tab-item' + (tabIndex === 2 ? ' active' : '');
+      document.getElementById('tab-btn-3').className = 'tab-item' + (tabIndex === 3 ? ' active' : '');
+
+      if (tabIndex === 3) {
+        document.getElementById('withdraw-available-bal').innerText = formatVND(balance);
       }
-      localStorage.setItem('local_backup_user', JSON.stringify(userData));
     }
 
-    // Tải dữ liệu từ Đám Mây khi server khởi động lại
-    function getCloudBackup(callback) {
-      if (tg.CloudStorage) {
-        tg.CloudStorage.getItem('cloud_backup_user', (err, val) => {
-          if (!err && val) {
-            try { return callback(JSON.parse(val)); } catch (e) {}
-          }
-          const local = localStorage.getItem('local_backup_user');
-          if (local) {
-            try { return callback(JSON.parse(local)); } catch (e) {}
-          }
-          callback(null);
-        });
+    function toggleBankSelect() {
+      const method = document.getElementById('wd-method').value;
+      const bankGroup = document.getElementById('bank-select-group');
+      const label = document.getElementById('account-label');
+
+      if (method === 'NGAN_HANG') {
+        bankGroup.style.display = 'block';
+        label.innerText = 'Số tài khoản ngân hàng:';
       } else {
-        const local = localStorage.getItem('local_backup_user');
-        if (local) {
-          try { return callback(JSON.parse(local)); } catch (e) {}
-        }
-        callback(null);
+        bankGroup.style.display = 'none';
+        label.innerText = method === 'MOMO' ? 'Số điện thoại Ví MoMo:' : 'Số điện thoại Ví ZaloPay:';
       }
     }
 
-    // 2. Tải và kiểm tra trạng thái tài khoản
+    // Tải thông tin người dùng
     async function loadData() {
       try {
         const res = await fetch('/api/user-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            initData: tg.initData,
-            deviceId: deviceId
-          })
+          body: JSON.stringify({ initData: tg.initData, deviceId: deviceId })
         });
         const data = await res.json();
 
-        // Nếu thiết bị bị khóa vì dùng nhiều tài khoản
-        if (data.device_blocked) {
-          document.getElementById('blocked-screen').style.display = 'block';
-          document.getElementById('blocked-msg').innerText = data.error;
-          document.getElementById('register-screen').style.display = 'none';
-          document.getElementById('game-screen').style.display = 'none';
-          return;
-        }
-
         if (data.success) {
           if (!data.is_registered) {
-            // Kiểm tra xem trên đám mây có bản sao lưu không để tự khôi phục
-            getCloudBackup(async (backup) => {
-              if (backup && backup.username) {
-                // Tự động khôi phục tài khoản
-                await fetch('/api/restore-account', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ initData: tg.initData, backup: backup })
-                });
-                return loadData(); // Tải lại dữ liệu sau khôi phục
-              }
-              document.getElementById('register-screen').style.display = 'block';
-              document.getElementById('game-screen').style.display = 'none';
-            });
+            document.getElementById('register-screen').style.display = 'block';
+            document.getElementById('main-content').style.display = 'none';
           } else {
             document.getElementById('register-screen').style.display = 'none';
-            document.getElementById('game-screen').style.display = 'block';
+            document.getElementById('main-content').style.display = 'block';
             document.getElementById('user-display').innerText = `👤 Tài khoản: ${data.user.username}`;
             balance = data.user.balance;
             fuelExpiresAt = data.user.fuel_expires_at;
             ratePerSec = data.user.rate_per_sec;
+            userTelegramId = data.user.telegram_id;
 
-            // Lưu bản sao lưu an toàn
-            saveToCloud(data.user);
+            // Cập nhật link giới thiệu
+            const refLink = `https://t.me/mayintien2026_bot/play?startapp=ref_${userTelegramId}`;
+            document.getElementById('ref-link-input').value = refLink;
+
+            // Cập nhật danh sách bạn bè
+            renderFriends(data.user.friends || []);
           }
         }
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) {}
     }
 
-    // 3. Đăng ký tài khoản (Khóa thiết bị)
+    function renderFriends(friends) {
+      document.getElementById('ref-count').innerText = friends.length;
+      const listEl = document.getElementById('ref-list');
+      if (friends.length === 0) {
+        listEl.innerHTML = 'Chưa có bạn bè nào đăng ký qua link của bạn.';
+        return;
+      }
+      listEl.innerHTML = friends.map(f => {
+        const pct = Math.min(100, Math.floor((f.ads_watched / 5000) * 100));
+        return `
+          <div class="friend-item">
+            <div style="display:flex; justify-content:space-between;">
+              <b style="color:#fff;">👤 ${f.username}</b>
+              <span style="color:#00ff88;">${f.ads_watched} / 5.000 Ads</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${pct}%;"></div>
+            </div>
+            <div style="font-size: 11px; color:#8c93a8; margin-top:4px;">
+              ${f.is_completed ? '🎉 Đạt 5.000 ads! Đã báo Admin gửi 10.000đ' : `Tiến độ: ${pct}%`}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function copyRefLink() {
+      const input = document.getElementById('ref-link-input');
+      input.select();
+      input.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(input.value);
+      if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+      alert("📋 Đã sao chép Link giới thiệu! Hãy gửi cho bạn bè để kiếm 10.000đ khi họ xem đủ 5.000 ads nhé!");
+    }
+
+    // Đăng ký tài khoản
     async function handleRegister() {
       const username = document.getElementById('reg-username').value;
       const pin = document.getElementById('reg-pin').value;
+      const refCode = tg.initDataUnsafe && tg.initDataUnsafe.start_param ? tg.initDataUnsafe.start_param : null;
 
-      if (!username || !pin) {
-        alert("Vui lòng nhập đầy đủ Tên tài khoản và Mã PIN!");
-        return;
-      }
+      if (!username || !pin) return alert("Vui lòng nhập đầy đủ Tên tài khoản và Mã PIN!");
 
       try {
         const res = await fetch('/api/register', {
@@ -316,23 +386,77 @@
             initData: tg.initData,
             username: username,
             pin: pin,
-            deviceId: deviceId
+            deviceId: deviceId,
+            refCode: refCode
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("🎉 Chúc mừng! Bạn đã tạo tài khoản thành công!");
+          loadData();
+        } else {
+          alert(data.error || "Đăng ký thất bại!");
+        }
+      } catch (e) {
+        alert("Lỗi kết nối!");
+      }
+    }
+
+    // XỬ LÝ RÚT TIỀN (TRỪ SỐ DƯ NGAY)
+    async function handleWithdraw() {
+      const amount = parseFloat(document.getElementById('wd-amount').value);
+      const pin = document.getElementById('wd-pin').value;
+      const method = document.getElementById('wd-method').value;
+      const bankName = document.getElementById('wd-bank-name').value;
+      const accountNumber = document.getElementById('wd-account-number').value;
+      const accountName = document.getElementById('wd-account-name').value;
+
+      if (!amount || amount < 1000) return alert("Số tiền rút tối thiểu là 1.000 VNĐ!");
+      if (amount > balance) return alert("Số dư khả dụng không đủ để rút!");
+      if (!accountNumber || !accountName) return alert("Vui lòng điền số tài khoản và tên chủ tài khoản!");
+      if (!pin) return alert("Vui lòng nhập mã PIN bảo mật!");
+
+      try {
+        const res = await fetch('/api/withdraw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData: tg.initData,
+            amount: amount,
+            pin: pin,
+            method: method,
+            bankName: method === 'NGAN_HANG' ? bankName : '',
+            accountNumber: accountNumber,
+            accountName: accountName
           })
         });
         const data = await res.json();
 
         if (data.success) {
-          alert("🎉 Chúc mừng! Tài khoản đã tạo và liên kết thành công với thiết bị này!");
-          loadData();
+          // TRỪ SỐ DƯ TRÊN GIAO DIỆN NGAY LẬP TỨC
+          balance -= amount;
+          document.getElementById('balance').innerText = formatVND(balance);
+          document.getElementById('withdraw-available-bal').innerText = formatVND(balance);
+
+          if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+          alert(data.message); // LUÔN BÁO THÀNH CÔNG
+
+          // Xóa form
+          document.getElementById('wd-amount').value = '';
+          document.getElementById('wd-account-number').value = '';
+          document.getElementById('wd-account-name').value = '';
+          document.getElementById('wd-pin').value = '';
+
+          switchTab(1); // Quay về tab chính
         } else {
-          alert(data.error || "Đăng ký thất bại!");
+          alert("❌ " + (data.error || "Rút tiền thất bại!"));
         }
       } catch (e) {
         alert("Lỗi kết nối máy chủ!");
       }
     }
 
-    // 4. In tiền tự động mỗi giây
+    // In tiền tự động mỗi giây
     setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       const remaining = Math.max(0, fuelExpiresAt - now);
@@ -354,7 +478,7 @@
       document.getElementById('balance').innerText = formatVND(balance);
     }, 1000);
 
-    // 5. Bắt đầu xem quảng cáo 1/2
+    // Xem quảng cáo
     async function startDoubleAd(rewardType) {
       if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
@@ -368,7 +492,6 @@
 
         if (data.success && data.adUrl) {
           currentSessionId = data.sessionId;
-
           const modal = document.getElementById('ad-modal');
           const iframe = document.getElementById('ad-iframe');
           const title = document.getElementById('ad-title');
@@ -399,15 +522,10 @@
               if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             }
           }, 1000);
-        } else {
-          alert("Không thể tải quảng cáo lúc này!");
         }
-      } catch (e) {
-        alert("Lỗi kết nối máy chủ!");
-      }
+      } catch (e) {}
     }
 
-    // 6. Chuyển tiếp sang quảng cáo 2/2
     async function loadSecondAd() {
       const title = document.getElementById('ad-title');
       const countdown = document.getElementById('ad-countdown');
@@ -429,7 +547,6 @@
 
         if (data.success && data.adUrl) {
           iframe.src = data.adUrl;
-
           let timeLeft = 15;
           countdown.innerText = `⏳ Chờ: ${timeLeft}s`;
 
@@ -445,15 +562,10 @@
               if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             }
           }, 1000);
-        } else {
-          alert(data.error || "Lỗi tải quảng cáo 2!");
         }
-      } catch (e) {
-        alert("Lỗi kết nối!");
-      }
+      } catch (e) {}
     }
 
-    // 7. Bấm 'X' nhận thưởng
     async function finishAllAdsAndClaim() {
       const modal = document.getElementById('ad-modal');
       const iframe = document.getElementById('ad-iframe');
@@ -475,12 +587,9 @@
           if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
           alert(result.message);
           loadData();
-        } else {
-          alert("❌ " + (result.message || "Chưa đủ điều kiện nhận thưởng!"));
         }
-      } catch (e) {
-        alert("Lỗi nhận thưởng!");
-      } finally {
+      } catch (e) {}
+      finally {
         currentSessionId = null;
       }
     }
