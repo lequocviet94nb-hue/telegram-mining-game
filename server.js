@@ -15,7 +15,7 @@ const SECRET_KEY = process.env.SECRET_KEY || 'mysecret123';
 const APP_URL = 'https://mayintien-tele.onrender.com';
 
 const RATE_PER_SEC_VND = 0.01;
-const MIN_WATCH_TIME_MS = 15000; // Mỗi quảng cáo tối thiểu 15 giây
+const MIN_WATCH_TIME_MS = 15000; // Tối thiểu 15 giây mỗi video
 
 // === DATABASE LƯU TRỮ VĨNH VIỄN ===
 const DB_FILE = path.join(__dirname, 'database.json');
@@ -35,14 +35,11 @@ function saveDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 1. Tự động thiết lập Bot Telegram: Cài Webhook & Nút Menu Button khi Server khởi động
+// 1. Tự động cài đặt Webhook và Menu Button cho Bot Telegram
 async function setupTelegramBot() {
   if (!BOT_TOKEN) return;
   try {
-    // Cài đặt Webhook để nhận lệnh /start
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${APP_URL}/api/telegram-webhook`);
-
-    // Cài đặt nút Menu Button "🎮 Chơi Game" ở góc dưới khung chat
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setChatMenuButton`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -54,14 +51,14 @@ async function setupTelegramBot() {
         }
       })
     });
-    console.log('[Telegram Bot] Đã kích hoạt Webhook và Menu Button thành công!');
+    console.log('[Telegram Bot] Kích hoạt Bot thành công!');
   } catch (err) {
     console.error('[Telegram Bot Error]', err);
   }
 }
 setupTelegramBot();
 
-// 2. API Xử lý khi người dùng nhắn tin cho Bot (như gõ /start)
+// 2. Webhook Telegram trả lời khi chat /start
 app.post('/api/telegram-webhook', async (req, res) => {
   const { message } = req.body;
   if (message && message.text && message.text.startsWith('/start')) {
@@ -74,7 +71,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          text: `👋 Chào mừng **${firstName}** đến với **Máy In Tiền Tự Động**!\n\n⚡ Hãy nạp nhiên liệu để cỗ máy tự động in tiền VNĐ cho bạn mỗi giây kể cả khi tắt app.\n\n👇 Bấm nút bên dưới để mở game chơi ngay:`,
+          text: `👋 Chào mừng **${firstName}** đến với **Máy In Tiền Tự Động**!\n\n⚡ Cày tiền VNĐ thụ động 24/7 không giới hạn.\n👇 Bấm nút bên dưới để mở game chơi ngay:`,
           parse_mode: 'Markdown',
           reply_markup: {
             inline_keyboard: [
@@ -84,13 +81,13 @@ app.post('/api/telegram-webhook', async (req, res) => {
         })
       });
     } catch (e) {
-      console.error("Lỗi gửi tin nhắn Telegram:", e);
+      console.error(e);
     }
   }
   res.sendStatus(200);
 });
 
-// 3. Xác thực bảo mật chữ ký Telegram
+// 3. Xác thực Telegram initData
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -112,7 +109,7 @@ function verifyTelegram(initDataStr) {
   }
 }
 
-// 4. Tính tiền đào tự động trên Server
+// 4. Tính toán tiền in tự động
 function calculateBalance(user) {
   const now = Math.floor(Date.now() / 1000);
   const effectiveEnd = Math.min(now, user.fuel_expires_at);
@@ -130,26 +127,18 @@ app.post('/api/register', (req, res) => {
   const { initData, username, pin } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
-  if (!username || username.trim().length < 3) {
-    return res.status(400).json({ error: 'Tên tài khoản phải từ 3 ký tự trở lên!' });
-  }
-  if (!pin || pin.trim().length < 4) {
-    return res.status(400).json({ error: 'Mã PIN bảo mật phải từ 4 số trở lên!' });
-  }
+  if (!username || username.trim().length < 3) return res.status(400).json({ error: 'Tên phải từ 3 ký tự!' });
+  if (!pin || pin.trim().length < 4) return res.status(400).json({ error: 'Mã PIN từ 4 số trở lên!' });
 
   const params = new URLSearchParams(initData);
   const tgUser = JSON.parse(params.get('user'));
   const tgId = String(tgUser.id);
 
   const db = loadDB();
-  if (db.users[tgId]) {
-    return res.status(400).json({ error: 'Tài khoản Telegram này đã đăng ký rồi!' });
-  }
+  if (db.users[tgId]) return res.status(400).json({ error: 'Đã đăng ký rồi!' });
 
   const isNameTaken = Object.values(db.users).some(u => u.username.toLowerCase() === username.trim().toLowerCase());
-  if (isNameTaken) {
-    return res.status(400).json({ error: 'Tên tài khoản này đã có người dùng, vui lòng chọn tên khác!' });
-  }
+  if (isNameTaken) return res.status(400).json({ error: 'Tên tài khoản này đã có người dùng!' });
 
   const now = Math.floor(Date.now() / 1000);
   db.users[tgId] = {
@@ -179,9 +168,7 @@ app.post('/api/user-status', (req, res) => {
   const db = loadDB();
   const user = db.users[tgId];
 
-  if (!user) {
-    return res.json({ success: true, is_registered: false });
-  }
+  if (!user) return res.json({ success: true, is_registered: false });
 
   user.rate_per_sec = RATE_PER_SEC_VND;
   calculateBalance(user);
@@ -197,9 +184,9 @@ app.post('/api/user-status', (req, res) => {
   });
 });
 
-// 7. API: Bắt đầu Quảng Cáo 1/2
+// 7. API: Bắt đầu Quảng Cáo 1/2 (Nhận loại thưởng: 'CASH' (+2 VNĐ) hoặc 'FUEL' (+10 phút))
 app.post('/api/start-ad-1', (req, res) => {
-  const { initData } = req.body;
+  const { initData, rewardType } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
   const params = new URLSearchParams(initData);
@@ -214,6 +201,7 @@ app.post('/api/start-ad-1', (req, res) => {
 
   db.sessions[sessionId] = {
     telegram_id: tgId,
+    reward_type: rewardType || 'CASH', // 'CASH' = +2 VNĐ | 'FUEL' = +10 phút
     step: 1,
     ad1_start: Date.now(),
     ad1_click_id: clickId1,
@@ -232,12 +220,12 @@ app.post('/api/start-ad-2', (req, res) => {
 
   const db = loadDB();
   const sess = db.sessions[sessionId];
-
   if (!sess) return res.status(404).json({ error: 'Phiên không tồn tại!' });
 
+  // Kiểm tra thời gian video 1: Bắt buộc >= 15s
   const elapsed1 = Date.now() - sess.ad1_start;
   if (elapsed1 < MIN_WATCH_TIME_MS) {
-    return res.status(400).json({ error: 'Bạn chưa xem đủ 15 giây quảng cáo thứ 1!' });
+    return res.status(400).json({ error: 'Bạn chưa xem đủ 15 giây quảng cáo 1!' });
   }
 
   const clickId2 = uuidv4();
@@ -251,7 +239,7 @@ app.post('/api/start-ad-2', (req, res) => {
   return res.json({ success: true, adUrl });
 });
 
-// 9. API: Bấm nút 'X' sau 2 quảng cáo để nhận thưởng
+// 9. API: Nhận thưởng sau khi xem xong CẢ 2 QUẢNG CÁO
 app.post('/api/claim-reward-double', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -263,47 +251,47 @@ app.post('/api/claim-reward-double', (req, res) => {
   const db = loadDB();
   const sess = db.sessions[sessionId];
 
-  if (!sess || sess.telegram_id !== tgId) {
-    return res.status(404).json({ success: false, message: 'Phiên không hợp lệ!' });
-  }
+  if (!sess || sess.telegram_id !== tgId) return res.status(404).json({ success: false, message: 'Phiên không hợp lệ!' });
+  if (sess.status === 'COMPLETED') return res.status(400).json({ success: false, message: 'Đã nhận thưởng rồi!' });
+  if (sess.step !== 2) return res.status(400).json({ success: false, message: 'Chưa xem xong quảng cáo thứ 2!' });
 
-  if (sess.status === 'COMPLETED') {
-    return res.status(400).json({ success: false, message: 'Đã nhận thưởng rồi!' });
-  }
-
-  if (sess.step !== 2) {
-    return res.status(400).json({ success: false, message: 'Bạn chưa hoàn thành quảng cáo thứ 2!' });
-  }
-
+  // Kiểm tra thời gian video 2: Bắt buộc >= 15s
   const elapsed2 = Date.now() - sess.ad2_start;
   if (elapsed2 < MIN_WATCH_TIME_MS) {
-    return res.status(400).json({ success: false, message: 'Bạn chưa xem đủ 15 giây quảng cáo thứ 2!' });
+    return res.status(400).json({ success: false, message: 'Bạn chưa xem đủ 15 giây quảng cáo 2!' });
   }
 
   sess.status = 'COMPLETED';
-
   const user = db.users[tgId];
+
+  let returnMsg = "";
   if (user) {
     const now = Math.floor(Date.now() / 1000);
     calculateBalance(user);
 
-    if (user.fuel_expires_at > now) {
-      user.fuel_expires_at += 600;
+    if (sess.reward_type === 'CASH') {
+      // CỘNG THẲNG 2 VNĐ TIỀN MẶT
+      user.balance += 2.0;
+      returnMsg = "🎉 Chúc mừng! Bạn đã nhận trực tiếp +2.00 VNĐ vào số dư!";
     } else {
-      user.fuel_expires_at = now + 600;
-      user.last_collected_at = now;
+      // CỘNG 10 PHÚT NHIÊN LIỆU (600 GIÂY)
+      if (user.fuel_expires_at > now) {
+        user.fuel_expires_at += 600;
+      } else {
+        user.fuel_expires_at = now + 600;
+        user.last_collected_at = now;
+      }
+      returnMsg = "🎉 Đã cộng +10 phút nhiên liệu in tiền!";
     }
   }
 
   saveDB(db);
-  console.log(`[OK] Người chơi ${tgId} đã xem đủ 2 quảng cáo và nhận +10 phút`);
-  return res.json({ success: true, message: 'Đã cộng +10 phút nhiên liệu thành công!' });
+  console.log(`[THƯỞNG] User ${tgId} nhận [${sess.reward_type}] thành công!`);
+  return res.json({ success: true, message: returnMsg, rewardType: sess.reward_type });
 });
 
-// 10. API: Webhook Postback Monetag
-app.get('/api/postback', (req, res) => {
-  res.send('OK');
-});
+// 10. API Postback Monetag
+app.get('/api/postback', (req, res) => res.send('OK'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server chạy tại cổng: ${PORT}`));
