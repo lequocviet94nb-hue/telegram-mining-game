@@ -18,10 +18,10 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Mã phiên bản máy chủ (Tự động cập nhật cho người chơi)
-const SERVER_BUILD_ID = Date.now().toString();
+const SERVER_BUILD_ID = 'build_' + Date.now().toString();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const MONETAG_LINK = process.env.MONETAG_LINK;
+const MONETAG_LINK = process.env.MONETAG_LINK || 'https://alwingulla.com/4/8634884';
 const SECRET_KEY = process.env.SECRET_KEY || 'mysecret123';
 const APP_URL = 'https://mayintien-tele.onrender.com';
 
@@ -429,7 +429,7 @@ app.post('/api/admin/withdrawals', (req, res) => {
   });
 });
 
-// 6. XEM QUẢNG CÁO 1/2
+// 6. XEM QUẢNG CÁO 1/2 (BẮT ĐẦU ĐẾM 15 GIÂY THẬT)
 app.post('/api/start-ad-1', (req, res) => {
   const { initData, rewardType } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -454,11 +454,12 @@ app.post('/api/start-ad-1', (req, res) => {
   };
   saveDB(db);
 
-  const adUrl = `${MONETAG_LINK}?sub_id_1=${clickId1}&ymid=${clickId1}`;
+  const sep1 = MONETAG_LINK.includes('?') ? '&' : '?';
+  const adUrl = `${MONETAG_LINK}${sep1}sub_id_1=${clickId1}&ymid=${clickId1}`;
   return res.json({ success: true, sessionId, adUrl });
 });
 
-// 7. XEM QUẢNG CÁO 2/2
+// 7. XEM QUẢNG CÁO 2/2 (KIỂM TRA ĐỦ 15 GIÂY QC 1 MỚI CHO QUA QC 2)
 app.post('/api/start-ad-2', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -479,11 +480,12 @@ app.post('/api/start-ad-2', (req, res) => {
   sess.status = 'WATCHING_2';
   saveDB(db);
 
-  const adUrl = `${MONETAG_LINK}?sub_id_1=${clickId2}&ymid=${clickId2}`;
+  const sep2 = MONETAG_LINK.includes('?') ? '&' : '?';
+  const adUrl = `${MONETAG_LINK}${sep2}sub_id_1=${clickId2}&ymid=${clickId2}`;
   return res.json({ success: true, adUrl });
 });
 
-// 8. NHẬN THƯỞNG
+// 8. NHẬN THƯỞNG (KIỂM TRA ĐỦ 15 GIÂY QC 2 MỚI CỘNG TIỀN)
 app.post('/api/claim-reward-double', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
