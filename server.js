@@ -7,7 +7,6 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 app.use(express.json());
 
-// Chống lưu Cache
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.set('Pragma', 'no-cache');
@@ -19,7 +18,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const SERVER_BUILD_ID = Date.now().toString();
 
-// === CẤU HÌNH BIẾN MÔI TRƯỜNG ===
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MONETAG_LINK = process.env.MONETAG_LINK;
 const SECRET_KEY = process.env.SECRET_KEY || 'mysecret123';
@@ -33,12 +31,16 @@ const DB_FILE = path.join(__dirname, 'database.json');
 
 function loadDB() {
   if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {}, sessions: {}, devices: {} }, null, 2));
+    fs.writeFileSync(DB_FILE, JSON.stringify({
+      users: {}, sessions: {}, devices: {}, withdrawals: [], admin_id: null
+    }, null, 2));
   }
   try {
-    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    if (!data.withdrawals) data.withdrawals = [];
+    return data;
   } catch (e) {
-    return { users: {}, sessions: {}, devices: {} };
+    return { users: {}, sessions: {}, devices: {}, withdrawals: [], admin_id: null };
   }
 }
 
@@ -46,7 +48,26 @@ function saveDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 1. Tự động thiết lập Bot Telegram
+// 1. Gửi thông báo đến Admin qua Bot Telegram
+async function notifyAdmin(text) {
+  const db = loadDB();
+  if (!db.admin_id || !BOT_TOKEN) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: db.admin_id,
+        text: text,
+        parse_mode: 'HTML'
+      })
+    });
+  } catch (err) {
+    console.error('[Notify Admin Error]', err);
+  }
+}
+
+// 2. Tự động thiết lập Bot Telegram
 async function setupTelegramBot() {
   if (!BOT_TOKEN) return;
   try {
@@ -62,44 +83,58 @@ async function setupTelegramBot() {
         }
       })
     });
-    console.log('[Telegram Bot] Kích hoạt Bot thành công!');
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) {}
 }
 setupTelegramBot();
 
-app.get('/api/version', (req, res) => {
-  res.json({ version: SERVER_BUILD_ID });
-});
+app.get('/api/version', (req, res) => res.json({ version: SERVER_BUILD_ID }));
 
+// 3. Webhook Bot Telegram (Hỗ trợ lệnh /admin để bạn đăng ký nhận thông báo)
 app.post('/api/telegram-webhook', async (req, res) => {
   const { message } = req.body;
-  if (message && message.text && message.text.startsWith('/start')) {
-    const chatId = message.chat.id;
-    const firstName = message.from ? message.from.first_name : 'bạn';
+  if (!message || !message.text) return res.sendStatus(200);
 
-    try {
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: `👋 Chào mừng **${firstName}** đến với **Máy In Tiền Tự Động**!\n\n⚡ Cày tiền VNĐ thụ động 24/7 không giới hạn.\n👇 Bấm nút bên dưới để mở game chơi ngay:`,
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "⚡ MỞ MÁY IN TIỀN NGAY ⚡", web_app: { url: APP_URL } }]
-            ]
-          }
-        })
-      });
-    } catch (e) {}
+  const chatId = message.chat.id;
+  const text = message.text.trim();
+
+  // Khi BẠN nhắn /admin -> Bot tự động lưu bạn làm Admin nhận thông báo
+  if (text === '/admin') {
+    const db = loadDB();
+    db.admin_id = chatId;
+    saveDB(db);
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `✅ <b>KÍCH HOẠT QUYỀN ADMIN THÀNH CÔNG!</b>\n\nTừ nay mọi thông báo:\n• Người chơi rút tiền\n• Người chơi mời bạn bè xem đủ 5.000 quảng cáo\nSẽ được gửi trực tiếp vào đây cho bạn xử lý!`,
+        parse_mode: 'HTML'
+      })
+    });
+    return res.sendStatus(200);
+  }
+
+  if (text.startsWith('/start')) {
+    const firstName = message.from ? message.from.first_name : 'bạn';
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `👋 Chào mừng <b>${firstName}</b> đến với <b>Máy In Tiền Tự Động</b>!\n\n⚡ Cày tiền VNĐ thụ động 24/7 không giới hạn.\n👇 Bấm nút bên dưới để mở game chơi ngay:`,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "⚡ MỞ MÁY IN TIỀN NGAY ⚡", web_app: { url: APP_URL } }]
+          ]
+        }
+      })
+    });
   }
   res.sendStatus(200);
 });
 
-// 2. Xác thực Telegram
+// 4. Xác thực Telegram
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -121,7 +156,7 @@ function verifyTelegram(initDataStr) {
   }
 }
 
-// 3. Tính toán tiền in tự động khi thoát game mở lại (Không mất 1 xu)
+// 5. Tính toán số dư in tiền
 function calculateBalance(user) {
   const now = Math.floor(Date.now() / 1000);
   const effectiveEnd = Math.min(now, user.fuel_expires_at);
@@ -134,12 +169,12 @@ function calculateBalance(user) {
   return user;
 }
 
-// 4. API Đăng ký tài khoản (KHÓA CHẶT 1 THIẾT BỊ = 1 TÀI KHOẢN)
+// 6. API Đăng ký (Có gắn mã Giới Thiệu Bạn Bè)
 app.post('/api/register', (req, res) => {
-  const { initData, username, pin, deviceId } = req.body;
+  const { initData, username, pin, deviceId, refCode } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
-  if (!deviceId) return res.status(400).json({ error: 'Không nhận diện được thiết bị!' });
+  if (!deviceId) return res.status(400).json({ error: 'Thiết bị không xác định!' });
   if (!username || username.trim().length < 3) return res.status(400).json({ error: 'Tên phải từ 3 ký tự!' });
   if (!pin || pin.trim().length < 4) return res.status(400).json({ error: 'Mã PIN từ 4 số trở lên!' });
 
@@ -149,15 +184,24 @@ app.post('/api/register', (req, res) => {
 
   const db = loadDB();
 
-  // Kiểm tra 1 thiết bị chỉ được tạo 1 tài khoản
+  // Khóa 1 thiết bị = 1 tài khoản
   if (db.devices && db.devices[deviceId] && db.devices[deviceId] !== tgId) {
-    return res.status(400).json({ error: '⛔ Thiết bị này đã đăng ký 1 tài khoản khác rồi! Mỗi thiết bị chỉ được phép chơi 1 tài khoản duy nhất.' });
+    return res.status(400).json({ error: '⛔ Thiết bị này đã đăng ký tài khoản khác rồi!' });
   }
 
-  if (db.users[tgId]) return res.status(400).json({ error: 'Tài khoản Telegram này đã đăng ký rồi!' });
+  if (db.users[tgId]) return res.status(400).json({ error: 'Tài khoản này đã tồn tại!' });
 
   const isNameTaken = Object.values(db.users).some(u => u.username.toLowerCase() === username.trim().toLowerCase());
   if (isNameTaken) return res.status(400).json({ error: 'Tên tài khoản này đã có người dùng!' });
+
+  // Kiểm tra mã giới thiệu
+  let inviterId = null;
+  if (refCode && refCode.startsWith('ref_')) {
+    const rawInviterId = refCode.replace('ref_', '').trim();
+    if (rawInviterId !== tgId && db.users[rawInviterId]) {
+      inviterId = rawInviterId;
+    }
+  }
 
   const now = Math.floor(Date.now() / 1000);
   db.users[tgId] = {
@@ -169,6 +213,8 @@ app.post('/api/register', (req, res) => {
     fuel_expires_at: now,
     last_collected_at: now,
     rate_per_sec: RATE_PER_SEC_VND,
+    invited_by: inviterId,
+    ads_watched: 0,
     created_at: now
   };
 
@@ -179,42 +225,7 @@ app.post('/api/register', (req, res) => {
   return res.json({ success: true });
 });
 
-// 5. API Khôi phục tài khoản từ đám mây Telegram (Chống mất dữ liệu khi Render restart)
-app.post('/api/restore-account', (req, res) => {
-  const { initData, backup } = req.body;
-  if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
-
-  const params = new URLSearchParams(initData);
-  const tgUser = JSON.parse(params.get('user'));
-  const tgId = String(tgUser.id);
-
-  if (!backup || !backup.username) return res.json({ success: false });
-
-  const db = loadDB();
-  if (!db.users[tgId]) {
-    // Khôi phục lại tài khoản từ đám mây của người dùng
-    db.users[tgId] = {
-      telegram_id: tgId,
-      username: backup.username,
-      pin: backup.pin || '1234',
-      device_id: backup.deviceId || 'restored',
-      balance: backup.balance || 0,
-      fuel_expires_at: backup.fuel_expires_at || Math.floor(Date.now() / 1000),
-      last_collected_at: backup.last_collected_at || Math.floor(Date.now() / 1000),
-      rate_per_sec: RATE_PER_SEC_VND,
-      created_at: backup.created_at || Math.floor(Date.now() / 1000)
-    };
-    if (backup.deviceId) {
-      if (!db.devices) db.devices = {};
-      db.devices[backup.deviceId] = tgId;
-    }
-    saveDB(db);
-    console.log(`[RESTORE] Đã khôi phục tài khoản an toàn cho user: ${tgId}`);
-  }
-  return res.json({ success: true });
-});
-
-// 6. API Lấy thông tin tài khoản
+// 7. API Lấy thông tin tài khoản & Danh sách bạn bè
 app.post('/api/user-status', (req, res) => {
   const { initData, deviceId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -225,12 +236,11 @@ app.post('/api/user-status', (req, res) => {
 
   const db = loadDB();
 
-  // Kiểm tra khóa thiết bị: Nếu thiết bị này thuộc về tài khoản khác
   if (deviceId && db.devices && db.devices[deviceId] && db.devices[deviceId] !== tgId) {
     return res.json({
       success: false,
       device_blocked: true,
-      error: '⛔ THIẾT BỊ NÀY ĐÃ ĐĂNG NHẬP TÀI KHOẢN KHÁC! Mỗi máy chỉ được chơi 1 tài khoản.'
+      error: '⛔ THIẾT BỊ NÀY ĐÃ ĐĂNG NHẬP TÀI KHOẢN KHÁC!'
     });
   }
 
@@ -239,24 +249,112 @@ app.post('/api/user-status', (req, res) => {
 
   user.rate_per_sec = RATE_PER_SEC_VND;
   calculateBalance(user);
+
+  // Lấy danh sách những người mình đã giới thiệu
+  const friends = [];
+  for (const [fId, fUser] of Object.entries(db.users)) {
+    if (fUser.invited_by === tgId) {
+      friends.push({
+        username: fUser.username,
+        ads_watched: fUser.ads_watched || 0,
+        is_completed: (fUser.ads_watched || 0) >= 5000
+      });
+    }
+  }
+
   saveDB(db);
 
   return res.json({
     success: true,
     is_registered: true,
     user: {
+      telegram_id: user.telegram_id,
       username: user.username,
       pin: user.pin,
       balance: user.balance,
       fuel_expires_at: user.fuel_expires_at,
       last_collected_at: user.last_collected_at,
       rate_per_sec: user.rate_per_sec,
-      deviceId: user.device_id
+      deviceId: user.device_id,
+      friends: friends
     }
   });
 });
 
-// 7. API Quảng Cáo 1/2
+// 8. API RÚT TIỀN (TRỪ SỐ DƯ NGAY LẬP TỨC 100% & THÔNG BÁO CHO ADMIN)
+app.post('/api/withdraw', async (req, res) => {
+  const { initData, amount, pin, method, bankName, accountNumber, accountName } = req.body;
+  if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
+
+  const params = new URLSearchParams(initData);
+  const tgUser = JSON.parse(params.get('user'));
+  const tgId = String(tgUser.id);
+
+  const db = loadDB();
+  const user = db.users[tgId];
+
+  if (!user) return res.status(404).json({ error: 'Tài khoản không tồn tại!' });
+
+  // Kiểm tra mã PIN bảo mật
+  if (user.pin !== pin.trim()) {
+    return res.status(400).json({ error: 'Mã PIN bảo mật không chính xác!' });
+  }
+
+  // Cập nhật số dư mới nhất
+  calculateBalance(user);
+
+  const withdrawAmount = parseFloat(amount);
+  if (isNaN(withdrawAmount) || withdrawAmount < 1000) {
+    return res.status(400).json({ error: 'Số tiền rút tối thiểu là 1.000 VNĐ!' });
+  }
+
+  if (user.balance < withdrawAmount) {
+    return res.status(400).json({ error: 'Số dư khả dụng không đủ để rút!' });
+  }
+
+  // === TRỪ TIỀN NGAY LẬP TỨC KHÔNG ĐỂ CHẬM TRỄ ===
+  user.balance -= withdrawAmount;
+  user.last_collected_at = Math.floor(Date.now() / 1000); // Khóa mốc thời gian chống tính bù
+
+  // Lưu lịch sử rút tiền
+  const withdrawId = uuidv4().substring(0, 8).toUpperCase();
+  const withdrawRecord = {
+    id: withdrawId,
+    telegram_id: tgId,
+    username: user.username,
+    amount: withdrawAmount,
+    method: method,
+    bankName: bankName || '',
+    accountNumber: accountNumber.trim(),
+    accountName: accountName.trim().toUpperCase(),
+    created_at: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+  };
+
+  db.withdrawals.push(withdrawRecord);
+  saveDB(db);
+
+  // BẮN THÔNG BÁO TỨC THÌ ĐẾN BOT CHO BẠN (ADMIN)
+  const notifyText = `🚨 <b>YÊU CẦU RÚT TIỀN MỚI [#${withdrawId}]</b>\n\n` +
+    `👤 <b>Người chơi:</b> ${user.username} (ID: <code>${tgId}</code>)\n` +
+    `💰 <b>Số tiền rút:</b> <b>${withdrawAmount.toLocaleString('vi-VN')} VNĐ</b>\n` +
+    `🏦 <b>Phương thức:</b> ${method} ${bankName ? '(' + bankName + ')' : ''}\n` +
+    `🔢 <b>Số tài khoản / SĐT:</b> <code>${accountNumber.trim()}</code>\n` +
+    `📝 <b>Tên chủ tài khoản:</b> <b>${accountName.trim().toUpperCase()}</b>\n` +
+    `⏰ <b>Thời gian:</b> ${withdrawRecord.created_at}\n\n` +
+    `👉 <i>Vui lòng mở App Ngân hàng / MoMo / ZaloPay chuyển khoản cho người chơi!</i>`;
+
+  notifyAdmin(notifyText);
+
+  console.log(`[RÚT TIỀN] User ${user.username} rút ${withdrawAmount} VNĐ thành công!`);
+
+  // LUÔN BÁO THÀNH CÔNG CHO NGƯỜI CHƠI
+  return res.json({
+    success: true,
+    message: `🎉 Yêu cầu rút ${withdrawAmount.toLocaleString('vi-VN')} VNĐ thành công! Tiền đã được trừ khỏi số dư và sẽ chuyển về tài khoản của bạn.`
+  });
+});
+
+// 9. API Bắt đầu xem quảng cáo 1/2
 app.post('/api/start-ad-1', (req, res) => {
   const { initData, rewardType } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -285,7 +383,7 @@ app.post('/api/start-ad-1', (req, res) => {
   return res.json({ success: true, sessionId, adUrl });
 });
 
-// 8. API Quảng Cáo 2/2
+// 10. API Chuyển sang quảng cáo 2/2
 app.post('/api/start-ad-2', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -310,7 +408,7 @@ app.post('/api/start-ad-2', (req, res) => {
   return res.json({ success: true, adUrl });
 });
 
-// 9. API Nhận Thưởng
+// 11. API Nhận thưởng (TỰ ĐỘNG ĐẾM TIẾN ĐỘ 5.000 ADS CHO NGƯỜI GIỚI THIỆU)
 app.post('/api/claim-reward-double', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -338,6 +436,24 @@ app.post('/api/claim-reward-double', (req, res) => {
   if (user) {
     const now = Math.floor(Date.now() / 1000);
     calculateBalance(user);
+
+    // Tăng số ads đã xem của người này (+2 ads)
+    user.ads_watched = (user.ads_watched || 0) + 2;
+
+    // KIỂM TRA ĐIỀU KIỆN 5.000 ADS ĐỂ BÁO CHO ADMIN THƯỞNG 10.000 VNĐ
+    if (user.invited_by && db.users[user.invited_by]) {
+      const inviter = db.users[user.invited_by];
+      if (user.ads_watched >= 5000 && !user.notified_5000) {
+        user.notified_5000 = true;
+        const refAlert = `🎁 <b>THƯỞNG GIỚI THIỆU BẠN BÈ (5.000 ADS)</b>\n\n` +
+          `👤 <b>Người mời:</b> ${inviter.username} (ID: <code>${inviter.telegram_id}</code>)\n` +
+          `👥 <b>Người được mời:</b> ${user.username} (ID: <code>${tgId}</code>)\n` +
+          `🎯 <b>Tiến độ:</b> ĐÃ HOÀN THÀNH 5.000 QUẢNG CÁO!\n\n` +
+          `💵 <b>PHẦN THƯỞNG: 10.000 VNĐ</b>\n` +
+          `👉 <i>Hãy liên hệ và chuyển khoản 10.000 VNĐ cho người mời: ${inviter.username}!</i>`;
+        notifyAdmin(refAlert);
+      }
+    }
 
     if (sess.reward_type === 'CASH') {
       user.balance += 2.0;
