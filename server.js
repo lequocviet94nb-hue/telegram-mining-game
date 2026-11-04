@@ -13,10 +13,13 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 const MONETAG_LINK = process.env.MONETAG_LINK;
 const SECRET_KEY = process.env.SECRET_KEY || 'mysecret123';
 
-// Tốc độ in tiền: 0.01 VNĐ / giây (10 phút = 6 VNĐ)
+// Tốc độ: 0.01 VNĐ / giây
 const RATE_PER_SEC_VND = 0.01;
 
-// === HỆ THỐNG LƯU TRỮ VĨNH VIỄN (DATABASE FILE) ===
+// Thời gian xem quảng cáo tối thiểu: 15 Giây (15000 ms)
+const MIN_WATCH_TIME_MS = 15000;
+
+// === DATABASE LƯU TRỮ VĨNH VIỄN ===
 const DB_FILE = path.join(__dirname, 'database.json');
 
 function loadDB() {
@@ -34,7 +37,7 @@ function saveDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 1. Xác thực chữ ký Telegram
+// 1. Xác thực bảo mật chữ ký Telegram
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -56,7 +59,7 @@ function verifyTelegram(initDataStr) {
   }
 }
 
-// 2. Tính toán số dư in tiền (VNĐ)
+// 2. Tính tiền đào tự động trên Server
 function calculateBalance(user) {
   const now = Math.floor(Date.now() / 1000);
   const effectiveEnd = Math.min(now, user.fuel_expires_at);
@@ -100,7 +103,7 @@ app.post('/api/register', (req, res) => {
     telegram_id: tgId,
     username: username.trim(),
     pin: pin.trim(),
-    balance: 0, // Tính bằng VNĐ
+    balance: 0,
     fuel_expires_at: now,
     last_collected_at: now,
     rate_per_sec: RATE_PER_SEC_VND,
@@ -127,7 +130,6 @@ app.post('/api/user-status', (req, res) => {
     return res.json({ success: true, is_registered: false });
   }
 
-  // Luôn cập nhật tốc độ sang VNĐ
   user.rate_per_sec = RATE_PER_SEC_VND;
   calculateBalance(user);
   saveDB(db);
@@ -142,7 +144,7 @@ app.post('/api/user-status', (req, res) => {
   });
 });
 
-// 5. API: Tạo link xem Monetag
+// 5. API: Tạo phiên xem quảng cáo Monetag
 app.post('/api/create-ad-session', (req, res) => {
   const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -165,25 +167,69 @@ app.post('/api/create-ad-session', (req, res) => {
   saveDB(db);
 
   const adUrl = `${MONETAG_LINK}?sub_id_1=${clickId}&ymid=${clickId}`;
-  return res.json({ success: true, adUrl });
+  return res.json({ success: true, adUrl, clickId });
 });
 
-// 6. API: Postback Monetag
-app.get('/api/postback', (req, res) => {
-  const { click_id, secret } = req.query;
+// 6. API MỚI: Game gọi để kiểm tra xem lượt xem quảng cáo có hợp lệ không
+app.post('/api/check-ad-status', (req, res) => {
+  const { initData, clickId } = req.body;
+  if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
-  if (secret !== SECRET_KEY) return res.status(403).send('Forbidden');
+  const db = loadDB();
+  const claim = db.claims[clickId];
+
+  if (!claim) {
+    return res.json({ success: false, status: 'NOT_FOUND', message: 'Không tìm thấy phiên quảng cáo!' });
+  }
+
+  if (claim.status === 'COMPLETED') {
+    return res.json({ success: true, status: 'COMPLETED', message: 'Hợp lệ! Đã cộng +10 phút nhiên liệu.' });
+  }
+
+  if (claim.status === 'TOO_FAST') {
+    return res.json({ success: false, status: 'TOO_FAST', message: 'Bạn tắt quảng cáo quá sớm! Không đủ điều kiện nhận thưởng.' });
+  }
+
+  // Nếu vẫn PENDING mà đã quá 40 giây hoặc người dùng quay lại quá sớm
+  const elapsed = Date.now() - claim.created_at;
+  if (elapsed < MIN_WATCH_TIME_MS) {
+    claim.status = 'TOO_FAST';
+    saveDB(db);
+    return res.json({ success: false, status: 'TOO_FAST', message: 'Bạn tắt quảng cáo quá sớm! Phải xem tối thiểu 15 giây.' });
+  }
+
+  return res.json({ success: false, status: 'PENDING', message: 'Chưa hoàn thành hoặc chưa nhận được phản hồi từ mạng quảng cáo!' });
+});
+
+// 7. API: Webhook Postback Monetag
+app.get('/api/postback', (req, res) => {
+  const { click_id, secret, reward_event_type } = req.query;
+
+  if (secret !== SECRET_KEY) return res.status(403).send('Forbidden: Sai Secret');
 
   const db = loadDB();
   const claim = db.claims[click_id];
 
   if (!claim) return res.status(404).send('Not found');
-  if (claim.status !== 'PENDING') return res.status(400).send('Already claimed');
+  if (claim.status !== 'PENDING') return res.status(400).send('Already processed');
 
-  if ((Date.now() - claim.created_at) < 10000) {
-    return res.status(400).send('Invalid watch time');
+  // Kiểm tra thời gian: Nếu xem dưới 15 giây -> Từ chối ngay
+  const elapsed = Date.now() - claim.created_at;
+  if (elapsed < MIN_WATCH_TIME_MS) {
+    claim.status = 'TOO_FAST';
+    saveDB(db);
+    console.log(`[CẢNH BÁO] User ${claim.telegram_id} tắt quảng cáo quá sớm (${elapsed}ms) -> TỪ CHỐI`);
+    return res.status(400).send('Too fast');
   }
 
+  // Nếu Monetag báo quảng cáo không có giá trị
+  if (reward_event_type === 'non_valued') {
+    claim.status = 'NON_VALUED';
+    saveDB(db);
+    return res.status(400).send('Non valued');
+  }
+
+  // Đủ điều kiện: Đánh dấu thành công và cộng 10 phút
   claim.status = 'COMPLETED';
 
   const user = db.users[claim.telegram_id];
@@ -191,7 +237,6 @@ app.get('/api/postback', (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     calculateBalance(user);
 
-    // Nạp dồn 10 phút (600s)
     if (user.fuel_expires_at > now) {
       user.fuel_expires_at += 600;
     } else {
@@ -201,7 +246,7 @@ app.get('/api/postback', (req, res) => {
   }
 
   saveDB(db);
-  console.log(`[OK] Cộng 10 phút cho user: ${claim.telegram_id}`);
+  console.log(`[OK] Quảng cáo hợp lệ! Đã cộng 10 phút cho user: ${claim.telegram_id}`);
   return res.send('OK');
 });
 
