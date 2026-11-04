@@ -7,31 +7,46 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
-      margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0; padding: 15px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0f1015; color: #ffffff; text-align: center;
     }
     .box {
-      background: #1b1d28; border-radius: 16px; padding: 20px; margin-bottom: 20px;
+      background: #1b1d28; border-radius: 16px; padding: 18px; margin-bottom: 15px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #2a2d3e;
     }
     .user-tag {
       background: #2a2d3e; display: inline-block; padding: 6px 14px;
-      border-radius: 20px; font-size: 13px; color: #00ff88; margin-bottom: 15px;
+      border-radius: 20px; font-size: 13px; color: #00ff88; margin-bottom: 12px;
     }
-    .balance-title { font-size: 14px; color: #8c93a8; text-transform: uppercase; letter-spacing: 1px; }
-    .balance-val { font-size: 34px; font-weight: 800; color: #00ff88; margin: 10px 0; }
-    .timer-val { font-size: 24px; font-weight: bold; color: #ffb703; margin: 5px 0; }
+    .balance-title { font-size: 13px; color: #8c93a8; text-transform: uppercase; letter-spacing: 1px; }
+    .balance-val { font-size: 34px; font-weight: 800; color: #00ff88; margin: 8px 0; }
+    .timer-val { font-size: 22px; font-weight: bold; color: #ffb703; margin: 4px 0; }
     .status-running { color: #00ff88; font-weight: bold; }
     .status-stopped { color: #ff4757; font-weight: bold; }
-    .btn-charge {
-      background: linear-gradient(135deg, #ff9900, #ff5500); color: #fff; border: none;
-      padding: 16px 20px; font-size: 17px; font-weight: bold; border-radius: 35px;
-      width: 100%; cursor: pointer; box-shadow: 0 4px 15px rgba(255,102,0,0.4);
-    }
-    .btn-charge:active { transform: scale(0.96); }
-    .note { font-size: 13px; color: #8c93a8; margin-top: 15px; }
 
-    /* KHUNG QUẢNG CÁO NỘI BỘ */
+    /* Nút bấm hành động */
+    .btn-action {
+      border: none; padding: 16px; font-size: 16px; font-weight: bold; border-radius: 25px;
+      width: 100%; cursor: pointer; margin-bottom: 12px; transition: transform 0.1s;
+    }
+    .btn-action:active { transform: scale(0.97); }
+    .btn-cash {
+      background: linear-gradient(135deg, #00ff88, #00b894); color: #000;
+      box-shadow: 0 4px 15px rgba(0,255,136,0.3);
+    }
+    .btn-fuel {
+      background: linear-gradient(135deg, #ff9900, #ff5500); color: #fff;
+      box-shadow: 0 4px 15px rgba(255,102,0,0.3);
+    }
+
+    /* Khung hướng dẫn Auto Clicker */
+    .auto-guide {
+      background: rgba(255, 170, 0, 0.1); border: 1px dashed #ffaa00;
+      border-radius: 12px; padding: 12px; margin-top: 15px; text-align: left; font-size: 12px; color: #ffdd99;
+    }
+    .auto-guide b { color: #ffaa00; }
+
+    /* Màn hình xem quảng cáo nội bộ */
     #ad-modal {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: #000; z-index: 99999; flex-direction: column;
@@ -68,17 +83,15 @@
       width: 100%; box-sizing: border-box; padding: 14px; border-radius: 12px;
       background: #12131a; border: 1px solid #2a2d3e; color: #fff; font-size: 16px;
     }
-    .input-field:focus { outline: none; border-color: #00ff88; }
     .btn-register {
       background: linear-gradient(135deg, #00ff88, #00b894); color: #000; border: none;
-      padding: 16px; font-size: 18px; font-weight: bold; border-radius: 35px;
-      width: 100%; cursor: pointer; margin-top: 10px;
+      padding: 16px; font-size: 18px; font-weight: bold; border-radius: 35px; width: 100%; cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <!-- KHUNG QUẢNG CÁO NỘI BỘ (2 QUẢNG CÁO LIÊN TIẾP) -->
+  <!-- MÀN HÌNH QUẢNG CÁO NỘI BỘ (KHÔNG THOÁT GAME) -->
   <div id="ad-modal">
     <div id="ad-top-bar">
       <div id="ad-title" class="ad-title">📺 QUẢNG CÁO (1/2)</div>
@@ -92,12 +105,12 @@
   <!-- MÀN HÌNH ĐĂNG KÝ -->
   <div id="register-screen">
     <h2>📝 TẠO TÀI KHOẢN MỚI</h2>
-    <p style="color: #8c93a8; font-size: 14px;">Tạo tài khoản để lưu trữ tiền VNĐ và số phút nhiên liệu của bạn.</p>
+    <p style="color: #8c93a8; font-size: 14px;">Tạo tài khoản để lưu trữ tiền VNĐ của bạn.</p>
 
     <div class="box">
       <div class="input-group">
         <label>Tên tài khoản / Nickname:</label>
-        <input type="text" id="reg-username" class="input-field" placeholder="Ví dụ: TienVeTui_2026">
+        <input type="text" id="reg-username" class="input-field" placeholder="Ví dụ: DaiGia_2026">
       </div>
       <div class="input-group">
         <label>Mã PIN rút tiền (4-6 số):</label>
@@ -111,22 +124,34 @@
   <div id="game-screen" style="display: none;">
     <div id="user-display" class="user-tag">👤 Tài khoản: Đang tải...</div>
 
-    <h2>⚡ MÁY IN TIỀN TỰ ĐỘNG</h2>
-
     <div class="box">
-      <div class="balance-title">Số Dư Tích Lũy</div>
+      <div class="balance-title">Số Dư Hiện Tại</div>
       <div id="balance" class="balance-val">0.00 VNĐ</div>
-      <div style="font-size: 13px; color: #8c93a8;">Tốc độ: +0.01 VNĐ / giây (+6.00 VNĐ / 10 phút)</div>
+      <div style="font-size: 12px; color: #8c93a8;">Tốc độ máy in: +0.01 VNĐ / giây</div>
     </div>
 
     <div class="box">
-      <div class="balance-title">Nhiên Liệu Hoạt Động</div>
+      <div class="balance-title">Nhiên Liệu Máy In</div>
       <div id="timer" class="timer-val">00h 00m 00s</div>
       <div id="status" class="status-stopped">Trạng thái: ĐÃ DỪNG</div>
     </div>
 
-    <button id="btn-charge" class="btn-charge" onclick="startDoubleAd()">⚡ NẠP +10 PHÚT (XEM 2 QUẢNG CÁO LIỀN)</button>
-    <div class="note">Xem liên tiếp 2 quảng cáo (mỗi quảng cáo 15s) ➔ Bấm dấu ✕ nhận +10 phút!</div>
+    <!-- NÚT 1: CỘNG TIỀN TƯƠI +2 VNĐ -->
+    <button class="btn-action btn-cash" onclick="startDoubleAd('CASH')">
+      💰 XEM 2 ADS = NHẬN NGAY +2.00 VNĐ
+    </button>
+
+    <!-- NÚT 2: NẠP NHIÊN LIỆU MÁY IN -->
+    <button class="btn-action btn-fuel" onclick="startDoubleAd('FUEL')">
+      ⚡ XEM 2 ADS = NẠP +10 PHÚT NHIÊN LIỆU
+    </button>
+
+    <!-- KHUNG GỢI Ý CẮM AUTO CLICKER -->
+    <div class="auto-guide">
+      <b>💡 MẸO TREO MÁY RẢNH TAY (AUTO CLICK):</b><br>
+      • Bạn có thể tải app <b>Auto Clicker</b> trên CH Play/App Store để cắm máy kiếm tiền tự động 24/24.<br>
+      • <b>Cài đặt:</b> Đặt vị trí click vào 2 nút xem và nút dấu [✕], chỉnh thời gian chờ giữa các lần click là <b>16 giây</b> để hệ thống kịp xác nhận thưởng nhé!
+    </div>
   </div>
 
   <script>
@@ -204,7 +229,7 @@
       }
     }
 
-    // 3. Tăng tiền mỗi giây
+    // 3. Tăng tiền tự động mỗi giây
     setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       const remaining = Math.max(0, fuelExpiresAt - now);
@@ -227,14 +252,17 @@
     }, 1000);
 
     // 4. BẮT ĐẦU XEM QUẢNG CÁO 1/2
-    async function startDoubleAd() {
+    async function startDoubleAd(rewardType) {
       if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
       try {
         const res = await fetch('/api/start-ad-1', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: tg.initData })
+          body: JSON.stringify({
+            initData: tg.initData,
+            rewardType: rewardType
+          })
         });
         const data = await res.json();
 
@@ -256,7 +284,6 @@
 
           iframe.src = data.adUrl;
 
-          // Đếm ngược 15 giây cho quảng cáo 1
           let timeLeft = 15;
           countdown.innerText = `⏳ Chờ: ${timeLeft}s`;
 
@@ -268,7 +295,7 @@
             } else {
               clearInterval(timerInterval);
               countdown.style.display = 'none';
-              nextBtn.style.display = 'inline-block'; // Hiện nút chuyển sang video 2
+              nextBtn.style.display = 'inline-block';
               if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             }
           }, 1000);
@@ -304,9 +331,8 @@
         const data = await res.json();
 
         if (data.success && data.adUrl) {
-          iframe.src = data.adUrl; // Tải quảng cáo thứ 2
+          iframe.src = data.adUrl;
 
-          // Đếm ngược 15 giây cho quảng cáo 2
           let timeLeft = 15;
           countdown.innerText = `⏳ Chờ: ${timeLeft}s`;
 
@@ -318,7 +344,7 @@
             } else {
               clearInterval(timerInterval);
               countdown.style.display = 'none';
-              closeBtn.style.display = 'inline-block'; // HIỆN NÚT DẤU 'X' NHẬN THƯỞNG
+              closeBtn.style.display = 'inline-block';
               if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             }
           }, 1000);
@@ -330,7 +356,7 @@
       }
     }
 
-    // 6. BẤM DẤU 'X' SAU KHI XONG 2 QUẢNG CÁO ĐỂ NHẬN THƯỞNG
+    // 6. BẤM DẤU 'X' ĐỂ NHẬN THƯỞNG
     async function finishAllAdsAndClaim() {
       const modal = document.getElementById('ad-modal');
       const iframe = document.getElementById('ad-iframe');
@@ -353,7 +379,7 @@
 
         if (result.success) {
           if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-          alert("🎉 XUẤT SẮC! Bạn đã xem đủ 2 quảng cáo và nhận +10 phút nhiên liệu!");
+          alert(result.message);
           loadData();
         } else {
           alert("❌ " + (result.message || "Chưa đủ điều kiện nhận thưởng!"));
