@@ -12,6 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MONETAG_LINK = process.env.MONETAG_LINK;
 const SECRET_KEY = process.env.SECRET_KEY || 'mysecret123';
+const APP_URL = 'https://mayintien-tele.onrender.com';
 
 const RATE_PER_SEC_VND = 0.01;
 const MIN_WATCH_TIME_MS = 15000; // Mỗi quảng cáo tối thiểu 15 giây
@@ -34,7 +35,62 @@ function saveDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 1. Xác thực bảo mật Telegram
+// 1. Tự động thiết lập Bot Telegram: Cài Webhook & Nút Menu Button khi Server khởi động
+async function setupTelegramBot() {
+  if (!BOT_TOKEN) return;
+  try {
+    // Cài đặt Webhook để nhận lệnh /start
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${APP_URL}/api/telegram-webhook`);
+
+    // Cài đặt nút Menu Button "🎮 Chơi Game" ở góc dưới khung chat
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setChatMenuButton`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        menu_button: {
+          type: 'web_app',
+          text: '🎮 Chơi Game',
+          web_app: { url: APP_URL }
+        }
+      })
+    });
+    console.log('[Telegram Bot] Đã kích hoạt Webhook và Menu Button thành công!');
+  } catch (err) {
+    console.error('[Telegram Bot Error]', err);
+  }
+}
+setupTelegramBot();
+
+// 2. API Xử lý khi người dùng nhắn tin cho Bot (như gõ /start)
+app.post('/api/telegram-webhook', async (req, res) => {
+  const { message } = req.body;
+  if (message && message.text && message.text.startsWith('/start')) {
+    const chatId = message.chat.id;
+    const firstName = message.from ? message.from.first_name : 'bạn';
+
+    try {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: `👋 Chào mừng **${firstName}** đến với **Máy In Tiền Tự Động**!\n\n⚡ Hãy nạp nhiên liệu để cỗ máy tự động in tiền VNĐ cho bạn mỗi giây kể cả khi tắt app.\n\n👇 Bấm nút bên dưới để mở game chơi ngay:`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "⚡ MỞ MÁY IN TIỀN NGAY ⚡", web_app: { url: APP_URL } }]
+            ]
+          }
+        })
+      });
+    } catch (e) {
+      console.error("Lỗi gửi tin nhắn Telegram:", e);
+    }
+  }
+  res.sendStatus(200);
+});
+
+// 3. Xác thực bảo mật chữ ký Telegram
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -56,7 +112,7 @@ function verifyTelegram(initDataStr) {
   }
 }
 
-// 2. Tính tiền đào tự động trên Server
+// 4. Tính tiền đào tự động trên Server
 function calculateBalance(user) {
   const now = Math.floor(Date.now() / 1000);
   const effectiveEnd = Math.min(now, user.fuel_expires_at);
@@ -69,7 +125,7 @@ function calculateBalance(user) {
   return user;
 }
 
-// 3. API: Đăng ký tài khoản
+// 5. API: Đăng ký tài khoản
 app.post('/api/register', (req, res) => {
   const { initData, username, pin } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -111,7 +167,7 @@ app.post('/api/register', (req, res) => {
   return res.json({ success: true });
 });
 
-// 4. API: Lấy thông tin tài khoản
+// 6. API: Lấy thông tin tài khoản
 app.post('/api/user-status', (req, res) => {
   const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -141,7 +197,7 @@ app.post('/api/user-status', (req, res) => {
   });
 });
 
-// 5. API: Bắt đầu Quảng Cáo Thứ 1 (1/2)
+// 7. API: Bắt đầu Quảng Cáo 1/2
 app.post('/api/start-ad-1', (req, res) => {
   const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -169,7 +225,7 @@ app.post('/api/start-ad-1', (req, res) => {
   return res.json({ success: true, sessionId, adUrl });
 });
 
-// 6. API: Chuyển sang Quảng Cáo Thứ 2 (2/2)
+// 8. API: Chuyển sang Quảng Cáo 2/2
 app.post('/api/start-ad-2', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -179,7 +235,6 @@ app.post('/api/start-ad-2', (req, res) => {
 
   if (!sess) return res.status(404).json({ error: 'Phiên không tồn tại!' });
 
-  // Kiểm tra: Quảng cáo 1 phải xem đủ 15 giây
   const elapsed1 = Date.now() - sess.ad1_start;
   if (elapsed1 < MIN_WATCH_TIME_MS) {
     return res.status(400).json({ error: 'Bạn chưa xem đủ 15 giây quảng cáo thứ 1!' });
@@ -196,7 +251,7 @@ app.post('/api/start-ad-2', (req, res) => {
   return res.json({ success: true, adUrl });
 });
 
-// 7. API: Bấm nút 'X' sau khi xem xong CẢ 2 QUẢNG CÁO để nhận thưởng
+// 9. API: Bấm nút 'X' sau 2 quảng cáo để nhận thưởng
 app.post('/api/claim-reward-double', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -220,13 +275,11 @@ app.post('/api/claim-reward-double', (req, res) => {
     return res.status(400).json({ success: false, message: 'Bạn chưa hoàn thành quảng cáo thứ 2!' });
   }
 
-  // Kiểm tra: Quảng cáo 2 cũng phải đủ 15 giây
   const elapsed2 = Date.now() - sess.ad2_start;
   if (elapsed2 < MIN_WATCH_TIME_MS) {
     return res.status(400).json({ success: false, message: 'Bạn chưa xem đủ 15 giây quảng cáo thứ 2!' });
   }
 
-  // Hợp lệ cả 2 video: Cộng 10 phút (600s)
   sess.status = 'COMPLETED';
 
   const user = db.users[tgId];
@@ -244,12 +297,11 @@ app.post('/api/claim-reward-double', (req, res) => {
 
   saveDB(db);
   console.log(`[OK] Người chơi ${tgId} đã xem đủ 2 quảng cáo và nhận +10 phút`);
-  return res.json({ success: true, message: 'Tuyệt vời! Đã cộng +10 phút nhiên liệu thành công!' });
+  return res.json({ success: true, message: 'Đã cộng +10 phút nhiên liệu thành công!' });
 });
 
-// 8. API: Postback Monetag
+// 10. API: Webhook Postback Monetag
 app.get('/api/postback', (req, res) => {
-  // Ghi nhận Postback bình thường từ Monetag
   res.send('OK');
 });
 
