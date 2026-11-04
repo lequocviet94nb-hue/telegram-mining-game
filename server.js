@@ -14,19 +14,19 @@ const MONETAG_LINK = process.env.MONETAG_LINK;
 const SECRET_KEY = process.env.SECRET_KEY || 'mysecret123';
 
 const RATE_PER_SEC_VND = 0.01;
-const MIN_WATCH_TIME_MS = 15000; // 15 giây tối thiểu
+const MIN_WATCH_TIME_MS = 15000; // Mỗi quảng cáo tối thiểu 15 giây
 
 // === DATABASE LƯU TRỮ VĨNH VIỄN ===
 const DB_FILE = path.join(__dirname, 'database.json');
 
 function loadDB() {
   if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {}, claims: {} }, null, 2));
+    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {}, sessions: {} }, null, 2));
   }
   try {
     return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
   } catch (e) {
-    return { users: {}, claims: {} };
+    return { users: {}, sessions: {} };
   }
 }
 
@@ -34,7 +34,7 @@ function saveDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 1. Xác thực bảo mật chữ ký Telegram
+// 1. Xác thực bảo mật Telegram
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -69,7 +69,7 @@ function calculateBalance(user) {
   return user;
 }
 
-// 3. API: Đăng ký tài khoản mới
+// 3. API: Đăng ký tài khoản
 app.post('/api/register', (req, res) => {
   const { initData, username, pin } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -141,8 +141,8 @@ app.post('/api/user-status', (req, res) => {
   });
 });
 
-// 5. API: Tạo phiên xem quảng cáo nội bộ
-app.post('/api/create-ad-session', (req, res) => {
+// 5. API: Bắt đầu Quảng Cáo Thứ 1 (1/2)
+app.post('/api/start-ad-1', (req, res) => {
   const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
@@ -151,25 +151,54 @@ app.post('/api/create-ad-session', (req, res) => {
   const tgId = String(tgUser.id);
 
   const db = loadDB();
-  if (!db.users[tgId]) {
-    return res.status(400).json({ error: 'Vui lòng đăng ký tài khoản trước!' });
-  }
+  if (!db.users[tgId]) return res.status(400).json({ error: 'Vui lòng đăng ký trước!' });
 
-  const clickId = uuidv4();
-  db.claims[clickId] = {
+  const sessionId = uuidv4();
+  const clickId1 = uuidv4();
+
+  db.sessions[sessionId] = {
     telegram_id: tgId,
-    created_at: Date.now(),
-    status: 'WATCHING'
+    step: 1,
+    ad1_start: Date.now(),
+    ad1_click_id: clickId1,
+    status: 'WATCHING_1'
   };
   saveDB(db);
 
-  const adUrl = `${MONETAG_LINK}?sub_id_1=${clickId}&ymid=${clickId}`;
-  return res.json({ success: true, adUrl, clickId });
+  const adUrl = `${MONETAG_LINK}?sub_id_1=${clickId1}&ymid=${clickId1}`;
+  return res.json({ success: true, sessionId, adUrl });
 });
 
-// 6. API: Người chơi bấm nút 'X' để xác nhận nhận thưởng
-app.post('/api/claim-reward', (req, res) => {
-  const { initData, clickId } = req.body;
+// 6. API: Chuyển sang Quảng Cáo Thứ 2 (2/2)
+app.post('/api/start-ad-2', (req, res) => {
+  const { initData, sessionId } = req.body;
+  if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
+
+  const db = loadDB();
+  const sess = db.sessions[sessionId];
+
+  if (!sess) return res.status(404).json({ error: 'Phiên không tồn tại!' });
+
+  // Kiểm tra: Quảng cáo 1 phải xem đủ 15 giây
+  const elapsed1 = Date.now() - sess.ad1_start;
+  if (elapsed1 < MIN_WATCH_TIME_MS) {
+    return res.status(400).json({ error: 'Bạn chưa xem đủ 15 giây quảng cáo thứ 1!' });
+  }
+
+  const clickId2 = uuidv4();
+  sess.step = 2;
+  sess.ad2_start = Date.now();
+  sess.ad2_click_id = clickId2;
+  sess.status = 'WATCHING_2';
+  saveDB(db);
+
+  const adUrl = `${MONETAG_LINK}?sub_id_1=${clickId2}&ymid=${clickId2}`;
+  return res.json({ success: true, adUrl });
+});
+
+// 7. API: Bấm nút 'X' sau khi xem xong CẢ 2 QUẢNG CÁO để nhận thưởng
+app.post('/api/claim-reward-double', (req, res) => {
+  const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
   const params = new URLSearchParams(initData);
@@ -177,24 +206,28 @@ app.post('/api/claim-reward', (req, res) => {
   const tgId = String(tgUser.id);
 
   const db = loadDB();
-  const claim = db.claims[clickId];
+  const sess = db.sessions[sessionId];
 
-  if (!claim || claim.telegram_id !== tgId) {
-    return res.status(404).json({ success: false, message: 'Phiên quảng cáo không tồn tại!' });
+  if (!sess || sess.telegram_id !== tgId) {
+    return res.status(404).json({ success: false, message: 'Phiên không hợp lệ!' });
   }
 
-  if (claim.status === 'COMPLETED') {
-    return res.status(400).json({ success: false, message: 'Phần thưởng này đã nhận rồi!' });
+  if (sess.status === 'COMPLETED') {
+    return res.status(400).json({ success: false, message: 'Đã nhận thưởng rồi!' });
   }
 
-  // Chống gian lận: Kiểm tra nếu chưa xem đủ 15 giây
-  const elapsed = Date.now() - claim.created_at;
-  if (elapsed < MIN_WATCH_TIME_MS) {
-    return res.status(400).json({ success: false, message: 'Bạn chưa xem đủ 15 giây quảng cáo!' });
+  if (sess.step !== 2) {
+    return res.status(400).json({ success: false, message: 'Bạn chưa hoàn thành quảng cáo thứ 2!' });
   }
 
-  // Đủ điều kiện: Cộng 10 phút (600s)
-  claim.status = 'COMPLETED';
+  // Kiểm tra: Quảng cáo 2 cũng phải đủ 15 giây
+  const elapsed2 = Date.now() - sess.ad2_start;
+  if (elapsed2 < MIN_WATCH_TIME_MS) {
+    return res.status(400).json({ success: false, message: 'Bạn chưa xem đủ 15 giây quảng cáo thứ 2!' });
+  }
+
+  // Hợp lệ cả 2 video: Cộng 10 phút (600s)
+  sess.status = 'COMPLETED';
 
   const user = db.users[tgId];
   if (user) {
@@ -210,33 +243,14 @@ app.post('/api/claim-reward', (req, res) => {
   }
 
   saveDB(db);
-  console.log(`[OK] Người chơi ${tgId} đã xem đủ và bấm nút X nhận +10 phút`);
-  return res.json({ success: true, message: 'Đã cộng +10 phút nhiên liệu thành công!' });
+  console.log(`[OK] Người chơi ${tgId} đã xem đủ 2 quảng cáo và nhận +10 phút`);
+  return res.json({ success: true, message: 'Tuyệt vời! Đã cộng +10 phút nhiên liệu thành công!' });
 });
 
-// 7. API: Webhook Postback Monetag (Đồng bộ ngầm)
+// 8. API: Postback Monetag
 app.get('/api/postback', (req, res) => {
-  const { click_id, secret } = req.query;
-  if (secret !== SECRET_KEY) return res.status(403).send('Forbidden');
-
-  const db = loadDB();
-  const claim = db.claims[click_id];
-
-  if (claim && claim.status !== 'COMPLETED') {
-    const elapsed = Date.now() - claim.created_at;
-    if (elapsed >= MIN_WATCH_TIME_MS) {
-      claim.status = 'COMPLETED';
-      const user = db.users[claim.telegram_id];
-      if (user) {
-        const now = Math.floor(Date.now() / 1000);
-        calculateBalance(user);
-        if (user.fuel_expires_at > now) user.fuel_expires_at += 600;
-        else user.fuel_expires_at = now + 600;
-      }
-      saveDB(db);
-    }
-  }
-  return res.send('OK');
+  // Ghi nhận Postback bình thường từ Monetag
+  res.send('OK');
 });
 
 const PORT = process.env.PORT || 3000;
