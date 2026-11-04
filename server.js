@@ -26,7 +26,6 @@ const APP_URL = 'https://mayintien-tele.onrender.com';
 const RATE_PER_SEC_VND = 0.01;
 const MIN_WATCH_TIME_MS = 15000;
 
-// === DATABASE LƯU TRỮ VĨNH VIỄN ===
 const DB_FILE = path.join(__dirname, 'database.json');
 
 function loadDB() {
@@ -38,6 +37,7 @@ function loadDB() {
   try {
     const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
     if (!data.withdrawals) data.withdrawals = [];
+    if (!data.devices) data.devices = {};
     return data;
   } catch (e) {
     return { users: {}, sessions: {}, devices: {}, withdrawals: [], admin_id: null };
@@ -48,7 +48,6 @@ function saveDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 1. Gửi thông báo đến Admin (Nội dung chuẩn chính sách, không vi phạm PII)
 async function notifyAdmin(text) {
   const db = loadDB();
   if (!db.admin_id || !BOT_TOKEN) return;
@@ -56,16 +55,11 @@ async function notifyAdmin(text) {
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: db.admin_id,
-        text: text,
-        parse_mode: 'HTML'
-      })
+      body: JSON.stringify({ chat_id: db.admin_id, text: text, parse_mode: 'HTML' })
     });
   } catch (err) {}
 }
 
-// 2. Tự động thiết lập Bot
 async function setupTelegramBot() {
   if (!BOT_TOKEN) return;
   try {
@@ -74,11 +68,7 @@ async function setupTelegramBot() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        menu_button: {
-          type: 'web_app',
-          text: '🎮 Chơi Game',
-          web_app: { url: APP_URL }
-        }
+        menu_button: { type: 'web_app', text: '🎮 Chơi Game', web_app: { url: APP_URL } }
       })
     });
   } catch (err) {}
@@ -87,7 +77,6 @@ setupTelegramBot();
 
 app.get('/api/version', (req, res) => res.json({ version: SERVER_BUILD_ID }));
 
-// 3. Webhook Telegram
 app.post('/api/telegram-webhook', async (req, res) => {
   const { message } = req.body;
   if (!message || !message.text) return res.sendStatus(200);
@@ -104,7 +93,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: `✅ <b>ĐÃ XÁC NHẬN BẠN LÀ ADMIN QUẢN TRỊ!</b>\n\nTừ nay khi có yêu cầu đổi thưởng hoặc bạn bè hoàn thành 5.000 quảng cáo, bot sẽ gửi thông báo bảo mật tại đây.`,
+        text: `✅ <b>ĐÃ XÁC NHẬN BẠN LÀ ADMIN!</b>\n\nTừ nay đơn đổi thưởng và bạn bè đạt 5.000 ads sẽ thông báo về đây.`,
         parse_mode: 'HTML'
       })
     });
@@ -118,7 +107,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: `👋 Chào mừng <b>${firstName}</b> đến với <b>Máy In Tiền Tự Động</b>!\n\n⚡ Cày điểm thưởng đổi quà 24/7 không giới hạn.\n👇 Bấm nút bên dưới để mở ứng dụng:`,
+        text: `👋 Chào mừng <b>${firstName}</b> đến với <b>Máy In Tiền Tự Động</b>!\n\n⚡ Cày tiền VNĐ thụ động 24/7 không giới hạn.\n👇 Bấm nút bên dưới để mở ứng dụng:`,
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
@@ -131,7 +120,6 @@ app.post('/api/telegram-webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-// 4. Xác thực Telegram
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -153,7 +141,7 @@ function verifyTelegram(initDataStr) {
   }
 }
 
-// 5. Tính toán số dư in tiền
+// Tính tiền khi tắt app mở lại (Bảo toàn số dư 100%)
 function calculateBalance(user) {
   const now = Math.floor(Date.now() / 1000);
   const effectiveEnd = Math.min(now, user.fuel_expires_at);
@@ -166,12 +154,14 @@ function calculateBalance(user) {
   return user;
 }
 
-// 6. Đăng ký tài khoản
+// 1. ĐĂNG KÝ TÀI KHOẢN (KHÓA CỨNG DẤU VÂN TAY PHẦN CỨNG 1 MÁY = 1 ACC)
 app.post('/api/register', (req, res) => {
-  const { initData, username, pin, deviceId, refCode } = req.body;
+  const { initData, username, pin, hardwareFingerprint, refCode } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
-  if (!deviceId) return res.status(400).json({ error: 'Thiết bị không xác định!' });
+  if (!hardwareFingerprint || hardwareFingerprint.length < 5) {
+    return res.status(400).json({ error: 'Không thể nhận diện phần cứng thiết bị!' });
+  }
   if (!username || username.trim().length < 3) return res.status(400).json({ error: 'Tên phải từ 3 ký tự!' });
   if (!pin || pin.trim().length < 4) return res.status(400).json({ error: 'Mã PIN từ 4 số trở lên!' });
 
@@ -181,8 +171,11 @@ app.post('/api/register', (req, res) => {
 
   const db = loadDB();
 
-  if (db.devices && db.devices[deviceId] && db.devices[deviceId] !== tgId) {
-    return res.status(400).json({ error: '⛔ Thiết bị này đã đăng ký 1 tài khoản rồi!' });
+  // KIỂM TRA PHẦN CỨNG: Nếu máy này đã từng liên kết với tài khoản Telegram khác
+  if (db.devices && db.devices[hardwareFingerprint] && db.devices[hardwareFingerprint] !== tgId) {
+    return res.status(400).json({
+      error: '⛔ THIẾT BỊ NÀY ĐÃ ĐĂNG KÝ 1 TÀI KHOẢN RỒI! Mỗi thiết bị phần cứng chỉ được phép chơi duy nhất 1 tài khoản.'
+    });
   }
 
   if (db.users[tgId]) return res.status(400).json({ error: 'Tài khoản này đã tồn tại!' });
@@ -203,7 +196,7 @@ app.post('/api/register', (req, res) => {
     telegram_id: tgId,
     username: username.trim(),
     pin: pin.trim(),
-    device_id: deviceId,
+    hardware_fingerprint: hardwareFingerprint,
     balance: 0,
     fuel_expires_at: now,
     last_collected_at: now,
@@ -214,15 +207,51 @@ app.post('/api/register', (req, res) => {
   };
 
   if (!db.devices) db.devices = {};
-  db.devices[deviceId] = tgId;
+  db.devices[hardwareFingerprint] = tgId;
 
   saveDB(db);
   return res.json({ success: true });
 });
 
-// 7. Lấy thông tin tài khoản
+// 2. TỰ ĐỘNG KHÔI PHỤC TÀI KHOẢN TỪ ĐÁM MÂY TELEGRAM (NẾU RENDER RESTART LÀM MẤT DỮ LIỆU)
+app.post('/api/restore-account', (req, res) => {
+  const { initData, backup } = req.body;
+  if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
+
+  const params = new URLSearchParams(initData);
+  const tgUser = JSON.parse(params.get('user'));
+  const tgId = String(tgUser.id);
+
+  if (!backup || !backup.username) return res.json({ success: false });
+
+  const db = loadDB();
+  if (!db.users[tgId]) {
+    db.users[tgId] = {
+      telegram_id: tgId,
+      username: backup.username,
+      pin: backup.pin || '1234',
+      hardware_fingerprint: backup.hardwareFingerprint || 'restored',
+      balance: backup.balance || 0,
+      fuel_expires_at: backup.fuel_expires_at || Math.floor(Date.now() / 1000),
+      last_collected_at: backup.last_collected_at || Math.floor(Date.now() / 1000),
+      rate_per_sec: RATE_PER_SEC_VND,
+      invited_by: backup.invited_by || null,
+      ads_watched: backup.ads_watched || 0,
+      created_at: backup.created_at || Math.floor(Date.now() / 1000)
+    };
+    if (backup.hardwareFingerprint) {
+      if (!db.devices) db.devices = {};
+      db.devices[backup.hardwareFingerprint] = tgId;
+    }
+    saveDB(db);
+    console.log(`[ĐÁM MÂY] Đã tự động khôi phục số dư và tài khoản an toàn cho user: ${tgId}`);
+  }
+  return res.json({ success: true });
+});
+
+// 3. LẤY TRẠNG THÁI TÀI KHOẢN
 app.post('/api/user-status', (req, res) => {
-  const { initData, deviceId } = req.body;
+  const { initData, hardwareFingerprint } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
   const params = new URLSearchParams(initData);
@@ -231,11 +260,12 @@ app.post('/api/user-status', (req, res) => {
 
   const db = loadDB();
 
-  if (deviceId && db.devices && db.devices[deviceId] && db.devices[deviceId] !== tgId) {
+  // Kiểm tra khóa thiết bị
+  if (hardwareFingerprint && db.devices && db.devices[hardwareFingerprint] && db.devices[hardwareFingerprint] !== tgId) {
     return res.json({
       success: false,
       device_blocked: true,
-      error: '⛔ THIẾT BỊ NÀY ĐÃ ĐĂNG NHẬP TÀI KHOẢN KHÁC!'
+      error: '⛔ THIẾT BỊ NÀY ĐÃ ĐĂNG KÝ TÀI KHOẢN KHÁC! Mỗi máy chỉ được chơi duy nhất 1 tài khoản.'
     });
   }
 
@@ -270,13 +300,15 @@ app.post('/api/user-status', (req, res) => {
       fuel_expires_at: user.fuel_expires_at,
       last_collected_at: user.last_collected_at,
       rate_per_sec: user.rate_per_sec,
-      deviceId: user.device_id,
+      hardwareFingerprint: user.hardware_fingerprint,
+      invited_by: user.invited_by,
+      ads_watched: user.ads_watched || 0,
       friends: friends
     }
   });
 });
 
-// 8. API RÚT TIỀN (TRỪ SỐ DƯ NGAY & THÔNG BÁO BẢO MẬT HỢP LỆ)
+// 4. API RÚT TIỀN
 app.post('/api/withdraw', async (req, res) => {
   const { initData, amount, pin, method, bankName, accountNumber, accountName } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -326,8 +358,6 @@ app.post('/api/withdraw', async (req, res) => {
   db.withdrawals.push(withdrawRecord);
   saveDB(db);
 
-  // === THÔNG BÁO BẢO MẬT CHO ADMIN (TUÂN THỦ CHÍNH SÁCH TELEGRAM) ===
-  // Che mờ 4 số cuối STK/SĐT và dùng từ ngữ trung tính
   const rawAcc = accountNumber.trim();
   const maskedAcc = rawAcc.length > 4 ? rawAcc.substring(0, rawAcc.length - 4) + '****' : '****';
   const channelDisplay = method === 'NGAN_HANG' ? (bankName || 'Ngân hàng') : method;
@@ -347,7 +377,7 @@ app.post('/api/withdraw', async (req, res) => {
   });
 });
 
-// 9. API DÀNH RIÊNG CHO ADMIN: Xem danh sách đơn rút tiền đầy đủ (Trong WebApp bảo mật)
+// 5. API ADMIN XEM ĐƠN
 app.post('/api/admin/withdrawals', (req, res) => {
   const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -361,14 +391,13 @@ app.post('/api/admin/withdrawals', (req, res) => {
     return res.status(403).json({ error: 'Không có quyền truy cập Quản trị!' });
   }
 
-  // Trả về danh sách đơn đầy đủ thông tin để admin chuyển khoản
   return res.json({
     success: true,
-    withdrawals: db.withdrawals.slice(-30).reverse() // 30 đơn mới nhất
+    withdrawals: db.withdrawals.slice(-30).reverse()
   });
 });
 
-// 10. API Bắt đầu xem quảng cáo 1/2
+// 6. XEM QUẢNG CÁO 1/2
 app.post('/api/start-ad-1', (req, res) => {
   const { initData, rewardType } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -397,7 +426,7 @@ app.post('/api/start-ad-1', (req, res) => {
   return res.json({ success: true, sessionId, adUrl });
 });
 
-// 11. API Chuyển sang quảng cáo 2/2
+// 7. XEM QUẢNG CÁO 2/2
 app.post('/api/start-ad-2', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -422,7 +451,7 @@ app.post('/api/start-ad-2', (req, res) => {
   return res.json({ success: true, adUrl });
 });
 
-// 12. API Nhận thưởng (Đếm 5.000 ads báo thưởng an toàn)
+// 8. NHẬN THƯỞNG
 app.post('/api/claim-reward-double', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -453,7 +482,6 @@ app.post('/api/claim-reward-double', (req, res) => {
 
     user.ads_watched = (user.ads_watched || 0) + 2;
 
-    // Báo thưởng bạn bè hoàn thành 5.000 ads (Từ ngữ chuẩn)
     if (user.invited_by && db.users[user.invited_by]) {
       const inviter = db.users[user.invited_by];
       if (user.ads_watched >= 5000 && !user.notified_5000) {
@@ -462,8 +490,8 @@ app.post('/api/claim-reward-double', (req, res) => {
           `👤 <b>Người giới thiệu:</b> ${inviter.username}\n` +
           `👥 <b>Người được mời:</b> ${user.username}\n` +
           `🎯 <b>Tiến độ:</b> Đã hoàn tất 5.000 lượt tương tác!\n\n` +
-          `🎁 <b>Phần thưởng cần trao: 10.000 VNĐ</b>\n` +
-          `👉 <i>Vui lòng kiểm tra và gửi quà cho người giới thiệu.</i>`;
+          `🎁 <b>Phần thưởng: 10.000 VNĐ</b>\n` +
+          `👉 <i>Vui lòng chuyển khoản thưởng 10.000 VNĐ cho người giới thiệu.</i>`;
         notifyAdmin(refAlert);
       }
     }
