@@ -49,25 +49,25 @@
 </head>
 <body>
 
-  <!-- MÀN HÌNH ĐĂNG KÝ TÀI KHOẢN (Hiện khi người chơi mới vào) -->
+  <!-- MÀN HÌNH ĐĂNG KÝ TÀI KHOẢN -->
   <div id="register-screen">
     <h2>📝 TẠO TÀI KHOẢN MỚI</h2>
-    <p style="color: #8c93a8; font-size: 14px;">Vui lòng tạo tài khoản để lưu trữ dữ liệu và số dư của bạn.</p>
+    <p style="color: #8c93a8; font-size: 14px;">Tạo tài khoản để lưu trữ tiền VNĐ và số phút nhiên liệu của bạn.</p>
 
     <div class="box">
       <div class="input-group">
-        <label>Tên nhân vật / Tên tài khoản:</label>
-        <input type="text" id="reg-username" class="input-field" placeholder="Ví dụ: DaiGia_2026">
+        <label>Tên tài khoản / Nickname:</label>
+        <input type="text" id="reg-username" class="input-field" placeholder="Ví dụ: TienVeTui_2026">
       </div>
       <div class="input-group">
-        <label>Mã PIN bảo mật rút tiền (4-6 số):</label>
-        <input type="password" id="reg-pin" class="input-field" placeholder="Nhập mã PIN bí mật">
+        <label>Mã PIN rút tiền (4-6 số):</label>
+        <input type="password" id="reg-pin" class="input-field" placeholder="Nhập mã PIN bảo mật">
       </div>
       <button class="btn-register" onclick="handleRegister()">XÁC NHẬN TẠO TÀI KHOẢN</button>
     </div>
   </div>
 
-  <!-- MÀN HÌNH GAME CHÍNH (Hiện sau khi đã đăng ký) -->
+  <!-- MÀN HÌNH GAME CHÍNH -->
   <div id="game-screen" style="display: none;">
     <div id="user-display" class="user-tag">👤 Tài khoản: Đang tải...</div>
 
@@ -75,8 +75,8 @@
 
     <div class="box">
       <div class="balance-title">Số Dư Tích Lũy</div>
-      <div id="balance" class="balance-val">$0.000000</div>
-      <div style="font-size: 12px; color: #8c93a8;">Tốc độ: +$0.0000003 / giây</div>
+      <div id="balance" class="balance-val">0.00 VNĐ</div>
+      <div style="font-size: 13px; color: #8c93a8;">Tốc độ: +0.01 VNĐ / giây (+6.00 VNĐ / 10 phút)</div>
     </div>
 
     <div class="box">
@@ -95,7 +95,12 @@
 
     let balance = 0;
     let fuelExpiresAt = 0;
-    let ratePerSec = 0.0000003;
+    let ratePerSec = 0.01; // 0.01 VNĐ mỗi giây
+
+    // Hàm định dạng số tiền VNĐ đẹp mắt (ví dụ: 12,345.50 VNĐ)
+    function formatVND(amount) {
+      return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
+    }
 
     // 1. Kiểm tra trạng thái tài khoản
     async function loadData() {
@@ -109,11 +114,9 @@
 
         if (data.success) {
           if (!data.is_registered) {
-            // Chưa đăng ký -> Hiện màn hình đăng ký
             document.getElementById('register-screen').style.display = 'block';
             document.getElementById('game-screen').style.display = 'none';
           } else {
-            // Đã có tài khoản -> Vào thẳng game
             document.getElementById('register-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'block';
             document.getElementById('user-display').innerText = `👤 Tài khoản: ${data.username}`;
@@ -127,7 +130,7 @@
       }
     }
 
-    // 2. Xử lý bấm Đăng ký tài khoản
+    // 2. Xử lý Đăng ký tài khoản
     async function handleRegister() {
       const username = document.getElementById('reg-username').value;
       const pin = document.getElementById('reg-pin').value;
@@ -151,7 +154,7 @@
 
         if (data.success) {
           alert("🎉 Chúc mừng! Bạn đã tạo tài khoản thành công!");
-          loadData(); // Tự động load vào game
+          loadData();
         } else {
           alert(data.error || "Đăng ký thất bại!");
         }
@@ -160,7 +163,7 @@
       }
     }
 
-    // 3. Chạy đếm ngược và tăng tiền mượt mà
+    // 3. Chạy đếm ngược thời gian và tăng tiền VNĐ
     setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       const remaining = Math.max(0, fuelExpiresAt - now);
@@ -179,7 +182,7 @@
         document.getElementById('status').innerText = 'Trạng thái: HẾT NHIÊN LIỆU (ĐÃ DỪNG)';
         document.getElementById('status').className = 'status-stopped';
       }
-      document.getElementById('balance').innerText = `$${balance.toFixed(6)}`;
+      document.getElementById('balance').innerText = formatVND(balance);
     }, 1000);
 
     // 4. Bấm nạp nhiên liệu (Xem Monetag)
