@@ -29,17 +29,32 @@
       width: 100%; cursor: pointer; box-shadow: 0 4px 15px rgba(255,102,0,0.4);
     }
     .btn-charge:active { transform: scale(0.96); }
-    .btn-charge:disabled { background: #555; cursor: not-allowed; box-shadow: none; }
     .note { font-size: 13px; color: #8c93a8; margin-top: 15px; }
 
-    /* Hộp thông báo kết quả xem quảng cáo */
-    #ad-alert {
-      display: none; padding: 15px; border-radius: 12px; margin-bottom: 20px;
-      font-size: 14px; font-weight: bold; line-height: 1.5;
+    /* KHUNG QUẢNG CÁO NỘI BỘ (KHÔNG THOÁT GAME) */
+    #ad-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #000; z-index: 99999; flex-direction: column;
     }
-    .alert-success { background: rgba(0, 255, 136, 0.15); border: 1px solid #00ff88; color: #00ff88; }
-    .alert-error { background: rgba(255, 71, 87, 0.15); border: 1px solid #ff4757; color: #ff4757; }
-    .alert-loading { background: rgba(255, 183, 3, 0.15); border: 1px solid #ffb703; color: #ffb703; }
+    #ad-top-bar {
+      height: 55px; background: #1a1b26; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 15px; border-bottom: 2px solid #2a2d3e;
+    }
+    .ad-title { font-size: 14px; color: #8c93a8; font-weight: bold; }
+    .ad-timer-badge {
+      background: #ffaa00; color: #000; padding: 5px 12px;
+      border-radius: 20px; font-weight: bold; font-size: 13px;
+    }
+    .btn-close-ad {
+      display: none; background: #00ff88; color: #000; border: none;
+      padding: 8px 16px; font-weight: bold; font-size: 14px;
+      border-radius: 20px; cursor: pointer; animation: pulse 1s infinite alternate;
+    }
+    @keyframes pulse {
+      from { transform: scale(1); box-shadow: 0 0 5px #00ff88; }
+      to { transform: scale(1.05); box-shadow: 0 0 15px #00ff88; }
+    }
+    #ad-iframe { width: 100%; flex: 1; border: none; background: #fff; }
 
     /* Form Đăng ký */
     #register-screen { display: none; }
@@ -58,6 +73,16 @@
   </style>
 </head>
 <body>
+
+  <!-- KHUNG QUẢNG CÁO NỘI BỘ (FULL MÀN HÌNH BÊN TRONG TELEGRAM) -->
+  <div id="ad-modal">
+    <div id="ad-top-bar">
+      <div class="ad-title">📺 QUẢNG CÁO TÀI TRỢ</div>
+      <div id="ad-countdown" class="ad-timer-badge">⏳ Chờ: 15s</div>
+      <button id="ad-close-btn" class="btn-close-ad" onclick="closeAdAndClaim()">✕ ĐÓNG & NHẬN THƯỞNG</button>
+    </div>
+    <iframe id="ad-iframe" src="about:blank"></iframe>
+  </div>
 
   <!-- MÀN HÌNH ĐĂNG KÝ TÀI KHOẢN -->
   <div id="register-screen">
@@ -81,9 +106,6 @@
   <div id="game-screen" style="display: none;">
     <div id="user-display" class="user-tag">👤 Tài khoản: Đang tải...</div>
 
-    <!-- KHUNG THÔNG BÁO TRẠNG THÁI QUẢNG CÁO -->
-    <div id="ad-alert"></div>
-
     <h2>⚡ MÁY IN TIỀN TỰ ĐỘNG</h2>
 
     <div class="box">
@@ -99,7 +121,7 @@
     </div>
 
     <button id="btn-charge" class="btn-charge" onclick="chargeFuel()">⚡ NẠP +10 PHÚT (XEM QUẢNG CÁO)</button>
-    <div class="note">⚠️ Chú ý: Phải xem ít nhất 15-20 giây mới được cộng. Tắt sớm sẽ bị hủy!</div>
+    <div class="note">Nạp dồn không giới hạn. Xem hết 15s bấm dấu ✕ để nhận thưởng!</div>
   </div>
 
   <script>
@@ -110,16 +132,10 @@
     let fuelExpiresAt = 0;
     let ratePerSec = 0.01;
     let activeClickId = null;
+    let adInterval = null;
 
     function formatVND(amount) {
       return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
-    }
-
-    function showAlert(text, type) {
-      const box = document.getElementById('ad-alert');
-      box.style.display = 'block';
-      box.className = type === 'success' ? 'alert-success' : (type === 'error' ? 'alert-error' : 'alert-loading');
-      box.innerText = text;
     }
 
     // 1. Kiểm tra trạng thái tài khoản
@@ -205,12 +221,8 @@
       document.getElementById('balance').innerText = formatVND(balance);
     }, 1000);
 
-    // 4. Bấm nạp nhiên liệu
+    // 4. MỞ QUẢNG CÁO NGAY TRONG GIAO DIỆN (KHÔNG THOÁT GAME)
     async function chargeFuel() {
-      const btn = document.getElementById('btn-charge');
-      btn.disabled = true;
-      btn.innerText = "⏳ Đang kết nối quảng cáo...";
-
       if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
       try {
@@ -223,32 +235,58 @@
 
         if (data.success && data.adUrl) {
           activeClickId = data.clickId;
-          showAlert("⏳ Đang mở quảng cáo... Hãy xem ít nhất 15-20 giây và KHÔNG tắt sớm!", "loading");
 
-          // Mở link quảng cáo
-          tg.openLink(data.adUrl);
+          // Mở màn hình quảng cáo nội bộ
+          const modal = document.getElementById('ad-modal');
+          const iframe = document.getElementById('ad-iframe');
+          const countdown = document.getElementById('ad-countdown');
+          const closeBtn = document.getElementById('ad-close-btn');
 
-          // Sau 18 giây, tự động gửi lệnh kiểm tra xem người chơi xem đủ chưa
-          setTimeout(verifyAdStatus, 18000);
+          modal.style.display = 'flex';
+          countdown.style.display = 'inline-block';
+          closeBtn.style.display = 'none';
+
+          // Tải link quảng cáo vào iframe
+          iframe.src = data.adUrl;
+
+          // Bắt đầu đếm ngược 15 giây
+          let timeLeft = 15;
+          countdown.innerText = `⏳ Chờ: ${timeLeft}s`;
+
+          if (adInterval) clearInterval(adInterval);
+          adInterval = setInterval(() => {
+            timeLeft--;
+            if (timeLeft > 0) {
+              countdown.innerText = `⏳ Chờ: ${timeLeft}s`;
+            } else {
+              clearInterval(adInterval);
+              // Hết 15 giây: Ẩn đồng hồ và HIỆN NÚT 'X'
+              countdown.style.display = 'none';
+              closeBtn.style.display = 'inline-block';
+              if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            }
+          }, 1000);
         } else {
-          showAlert("Lỗi: Không thể lấy quảng cáo lúc này!", "error");
-          btn.disabled = false;
-          btn.innerText = "⚡ NẠP +10 PHÚT (XEM QUẢNG CÁO)";
+          alert("Không thể tải quảng cáo lúc này!");
         }
       } catch (e) {
-        showAlert("Lỗi kết nối máy chủ!", "error");
-        btn.disabled = false;
-        btn.innerText = "⚡ NẠP +10 PHÚT (XEM QUẢNG CÁO)";
+        alert("Lỗi kết nối máy chủ!");
       }
     }
 
-    // 5. Kiểm tra kết quả xem quảng cáo từ Server
-    async function verifyAdStatus() {
-      const btn = document.getElementById('btn-charge');
+    // 5. NGƯỜI CHƠI BẤM NÚT 'X' ĐỂ ĐÓNG VÀ NHẬN THƯỞNG
+    async function closeAdAndClaim() {
+      const modal = document.getElementById('ad-modal');
+      const iframe = document.getElementById('ad-iframe');
+
+      // Tắt màn hình quảng cáo và dọn dẹp
+      modal.style.display = 'none';
+      iframe.src = 'about:blank';
+
       if (!activeClickId) return;
 
       try {
-        const res = await fetch('/api/check-ad-status', {
+        const res = await fetch('/api/claim-reward', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -258,20 +296,17 @@
         });
         const result = await res.json();
 
-        if (result.success && result.status === 'COMPLETED') {
+        if (result.success) {
           if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-          showAlert("🎉 NẠP THÀNH CÔNG! Bạn đã xem đủ quảng cáo và nhận +10 phút nhiên liệu.", "success");
+          alert("🎉 NẠP THÀNH CÔNG! Bạn đã xem hết quảng cáo và nhận +10 phút nhiên liệu.");
           loadData();
         } else {
-          if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-          showAlert("❌ THẤT BẠI: " + (result.message || "Bạn chưa xem hết quảng cáo hoặc đã tắt quá sớm!"), "error");
+          alert("❌ " + (result.message || "Chưa đủ điều kiện nhận thưởng!"));
         }
       } catch (e) {
-        showAlert("Lỗi kiểm tra kết quả quảng cáo!", "error");
+        alert("Lỗi nhận thưởng!");
       } finally {
         activeClickId = null;
-        btn.disabled = false;
-        btn.innerText = "⚡ NẠP +10 PHÚT (XEM QUẢNG CÁO)";
       }
     }
 
