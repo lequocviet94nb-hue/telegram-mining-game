@@ -18,7 +18,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Mã phiên bản máy chủ (Tự động cập nhật cho người chơi)
-const SERVER_BUILD_ID = 'build_' + Date.now().toString();
+const SERVER_BUILD_ID = 'monetag_sdk_' + Date.now().toString();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MONETAG_LINK = process.env.MONETAG_LINK || 'https://alwingulla.com/4/8634884';
@@ -429,7 +429,7 @@ app.post('/api/admin/withdrawals', (req, res) => {
   });
 });
 
-// 6. XEM QUẢNG CÁO 1/2 (BẮT ĐẦU ĐẾM 15 GIÂY THẬT)
+// 6. KHỞI TẠO LƯỢT XEM QUẢNG CÁO 1/2
 app.post('/api/start-ad-1', (req, res) => {
   const { initData, rewardType } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -442,24 +442,20 @@ app.post('/api/start-ad-1', (req, res) => {
   if (!db.users[tgId]) return res.status(400).json({ error: 'Vui lòng đăng ký trước!' });
 
   const sessionId = uuidv4();
-  const clickId1 = uuidv4();
 
   db.sessions[sessionId] = {
     telegram_id: tgId,
     reward_type: rewardType || 'CASH',
     step: 1,
     ad1_start: Date.now(),
-    ad1_click_id: clickId1,
     status: 'WATCHING_1'
   };
   saveDB(db);
 
-  const sep1 = MONETAG_LINK.includes('?') ? '&' : '?';
-  const adUrl = `${MONETAG_LINK}${sep1}sub_id_1=${clickId1}&ymid=${clickId1}`;
-  return res.json({ success: true, sessionId, adUrl });
+  return res.json({ success: true, sessionId });
 });
 
-// 7. XEM QUẢNG CÁO 2/2 (KIỂM TRA ĐỦ 15 GIÂY QC 1 MỚI CHO QUA QC 2)
+// 7. KHỞI TẠO LƯỢT XEM QUẢNG CÁO 2/2
 app.post('/api/start-ad-2', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -468,24 +464,15 @@ app.post('/api/start-ad-2', (req, res) => {
   const sess = db.sessions[sessionId];
   if (!sess) return res.status(404).json({ error: 'Phiên không tồn tại!' });
 
-  const elapsed1 = Date.now() - sess.ad1_start;
-  if (elapsed1 < MIN_WATCH_TIME_MS) {
-    return res.status(400).json({ error: 'Bạn chưa xem đủ 15 giây quảng cáo 1!' });
-  }
-
-  const clickId2 = uuidv4();
   sess.step = 2;
   sess.ad2_start = Date.now();
-  sess.ad2_click_id = clickId2;
   sess.status = 'WATCHING_2';
   saveDB(db);
 
-  const sep2 = MONETAG_LINK.includes('?') ? '&' : '?';
-  const adUrl = `${MONETAG_LINK}${sep2}sub_id_1=${clickId2}&ymid=${clickId2}`;
-  return res.json({ success: true, adUrl });
+  return res.json({ success: true });
 });
 
-// 8. NHẬN THƯỞNG (KIỂM TRA ĐỦ 15 GIÂY QC 2 MỚI CỘNG TIỀN)
+// 8. CỘNG THƯỞNG SAU KHI MONETAG XÁC NHẬN HOÀN THÀNH
 app.post('/api/claim-reward-double', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -500,11 +487,6 @@ app.post('/api/claim-reward-double', (req, res) => {
   if (!sess || sess.telegram_id !== tgId) return res.status(404).json({ success: false, message: 'Phiên không hợp lệ!' });
   if (sess.status === 'COMPLETED') return res.status(400).json({ success: false, message: 'Đã nhận thưởng rồi!' });
   if (sess.step !== 2) return res.status(400).json({ success: false, message: 'Chưa xem xong quảng cáo thứ 2!' });
-
-  const elapsed2 = Date.now() - sess.ad2_start;
-  if (elapsed2 < MIN_WATCH_TIME_MS) {
-    return res.status(400).json({ success: false, message: 'Bạn chưa xem đủ 15 giây quảng cáo 2!' });
-  }
 
   sess.status = 'COMPLETED';
   const user = db.users[tgId];
