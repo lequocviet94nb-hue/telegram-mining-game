@@ -14,6 +14,10 @@
       background: #1b1d28; border-radius: 16px; padding: 20px; margin-bottom: 20px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #2a2d3e;
     }
+    .user-tag {
+      background: #2a2d3e; display: inline-block; padding: 6px 14px;
+      border-radius: 20px; font-size: 13px; color: #00ff88; margin-bottom: 15px;
+    }
     .balance-title { font-size: 14px; color: #8c93a8; text-transform: uppercase; letter-spacing: 1px; }
     .balance-val { font-size: 34px; font-weight: 800; color: #00ff88; margin: 10px 0; }
     .timer-val { font-size: 24px; font-weight: bold; color: #ffb703; margin: 5px 0; }
@@ -26,26 +30,64 @@
     }
     .btn-charge:active { transform: scale(0.96); }
     .note { font-size: 13px; color: #8c93a8; margin-top: 15px; }
+
+    /* Form Đăng ký */
+    #register-screen { display: none; }
+    .input-group { text-align: left; margin-bottom: 15px; }
+    .input-group label { display: block; font-size: 13px; color: #8c93a8; margin-bottom: 5px; }
+    .input-field {
+      width: 100%; box-sizing: border-box; padding: 14px; border-radius: 12px;
+      background: #12131a; border: 1px solid #2a2d3e; color: #fff; font-size: 16px;
+    }
+    .input-field:focus { outline: none; border-color: #00ff88; }
+    .btn-register {
+      background: linear-gradient(135deg, #00ff88, #00b894); color: #000; border: none;
+      padding: 16px; font-size: 18px; font-weight: bold; border-radius: 35px;
+      width: 100%; cursor: pointer; margin-top: 10px;
+    }
   </style>
 </head>
 <body>
 
-  <h2>⚡ MÁY IN TIỀN TỰ ĐỘNG</h2>
+  <!-- MÀN HÌNH ĐĂNG KÝ TÀI KHOẢN (Hiện khi người chơi mới vào) -->
+  <div id="register-screen">
+    <h2>📝 TẠO TÀI KHOẢN MỚI</h2>
+    <p style="color: #8c93a8; font-size: 14px;">Vui lòng tạo tài khoản để lưu trữ dữ liệu và số dư của bạn.</p>
 
-  <div class="box">
-    <div class="balance-title">Số Dư Tích Lũy</div>
-    <div id="balance" class="balance-val">$0.000000</div>
-    <div style="font-size: 12px; color: #8c93a8;">Tốc độ: +$0.0000003 / giây</div>
+    <div class="box">
+      <div class="input-group">
+        <label>Tên nhân vật / Tên tài khoản:</label>
+        <input type="text" id="reg-username" class="input-field" placeholder="Ví dụ: DaiGia_2026">
+      </div>
+      <div class="input-group">
+        <label>Mã PIN bảo mật rút tiền (4-6 số):</label>
+        <input type="password" id="reg-pin" class="input-field" placeholder="Nhập mã PIN bí mật">
+      </div>
+      <button class="btn-register" onclick="handleRegister()">XÁC NHẬN TẠO TÀI KHOẢN</button>
+    </div>
   </div>
 
-  <div class="box">
-    <div class="balance-title">Nhiên Liệu Hoạt Động</div>
-    <div id="timer" class="timer-val">00h 00m 00s</div>
-    <div id="status" class="status-stopped">Trạng thái: ĐÃ DỪNG</div>
-  </div>
+  <!-- MÀN HÌNH GAME CHÍNH (Hiện sau khi đã đăng ký) -->
+  <div id="game-screen" style="display: none;">
+    <div id="user-display" class="user-tag">👤 Tài khoản: Đang tải...</div>
 
-  <button class="btn-charge" onclick="chargeFuel()">⚡ NẠP +10 PHÚT (XEM QUẢNG CÁO)</button>
-  <div class="note">Nạp dồn không giới hạn. Hết giờ máy sẽ ngừng in tiền!</div>
+    <h2>⚡ MÁY IN TIỀN TỰ ĐỘNG</h2>
+
+    <div class="box">
+      <div class="balance-title">Số Dư Tích Lũy</div>
+      <div id="balance" class="balance-val">$0.000000</div>
+      <div style="font-size: 12px; color: #8c93a8;">Tốc độ: +$0.0000003 / giây</div>
+    </div>
+
+    <div class="box">
+      <div class="balance-title">Nhiên Liệu Hoạt Động</div>
+      <div id="timer" class="timer-val">00h 00m 00s</div>
+      <div id="status" class="status-stopped">Trạng thái: ĐÃ DỪNG</div>
+    </div>
+
+    <button class="btn-charge" onclick="chargeFuel()">⚡ NẠP +10 PHÚT (XEM QUẢNG CÁO)</button>
+    <div class="note">Nạp dồn không giới hạn. Hết giờ máy sẽ ngừng in tiền!</div>
+  </div>
 
   <script>
     const tg = window.Telegram.WebApp;
@@ -55,6 +97,7 @@
     let fuelExpiresAt = 0;
     let ratePerSec = 0.0000003;
 
+    // 1. Kiểm tra trạng thái tài khoản
     async function loadData() {
       try {
         const res = await fetch('/api/user-status', {
@@ -63,16 +106,61 @@
           body: JSON.stringify({ initData: tg.initData })
         });
         const data = await res.json();
+
         if (data.success) {
-          balance = data.balance;
-          fuelExpiresAt = data.fuel_expires_at;
-          ratePerSec = data.rate_per_sec;
+          if (!data.is_registered) {
+            // Chưa đăng ký -> Hiện màn hình đăng ký
+            document.getElementById('register-screen').style.display = 'block';
+            document.getElementById('game-screen').style.display = 'none';
+          } else {
+            // Đã có tài khoản -> Vào thẳng game
+            document.getElementById('register-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            document.getElementById('user-display').innerText = `👤 Tài khoản: ${data.username}`;
+            balance = data.balance;
+            fuelExpiresAt = data.fuel_expires_at;
+            ratePerSec = data.rate_per_sec;
+          }
         }
       } catch (err) {
         console.error(err);
       }
     }
 
+    // 2. Xử lý bấm Đăng ký tài khoản
+    async function handleRegister() {
+      const username = document.getElementById('reg-username').value;
+      const pin = document.getElementById('reg-pin').value;
+
+      if (!username || !pin) {
+        alert("Vui lòng nhập đầy đủ Tên tài khoản và Mã PIN!");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData: tg.initData,
+            username: username,
+            pin: pin
+          })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert("🎉 Chúc mừng! Bạn đã tạo tài khoản thành công!");
+          loadData(); // Tự động load vào game
+        } else {
+          alert(data.error || "Đăng ký thất bại!");
+        }
+      } catch (e) {
+        alert("Lỗi kết nối máy chủ!");
+      }
+    }
+
+    // 3. Chạy đếm ngược và tăng tiền mượt mà
     setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       const remaining = Math.max(0, fuelExpiresAt - now);
@@ -94,6 +182,7 @@
       document.getElementById('balance').innerText = `$${balance.toFixed(6)}`;
     }, 1000);
 
+    // 4. Bấm nạp nhiên liệu (Xem Monetag)
     async function chargeFuel() {
       if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
@@ -107,7 +196,6 @@
 
         if (data.success && data.adUrl) {
           tg.openLink(data.adUrl);
-
           setTimeout(loadData, 15000);
         }
       } catch (e) {
