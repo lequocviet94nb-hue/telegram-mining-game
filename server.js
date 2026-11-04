@@ -13,6 +13,9 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 const MONETAG_LINK = process.env.MONETAG_LINK;
 const SECRET_KEY = process.env.SECRET_KEY || 'mysecret123';
 
+// Tốc độ in tiền: 0.01 VNĐ / giây (10 phút = 6 VNĐ)
+const RATE_PER_SEC_VND = 0.01;
+
 // === HỆ THỐNG LƯU TRỮ VĨNH VIỄN (DATABASE FILE) ===
 const DB_FILE = path.join(__dirname, 'database.json');
 
@@ -31,7 +34,7 @@ function saveDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 1. Xác thực chữ ký Telegram (Chống hack F12)
+// 1. Xác thực chữ ký Telegram
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -53,7 +56,7 @@ function verifyTelegram(initDataStr) {
   }
 }
 
-// 2. Tính toán số dư in tiền trên server
+// 2. Tính toán số dư in tiền (VNĐ)
 function calculateBalance(user) {
   const now = Math.floor(Date.now() / 1000);
   const effectiveEnd = Math.min(now, user.fuel_expires_at);
@@ -66,13 +69,13 @@ function calculateBalance(user) {
   return user;
 }
 
-// 3. API: Đăng ký tài khoản mới cho người chơi
+// 3. API: Đăng ký tài khoản mới
 app.post('/api/register', (req, res) => {
   const { initData, username, pin } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
   if (!username || username.trim().length < 3) {
-    return res.status(400).json({ error: 'Tên tài khoản phải có ít nhất 3 ký tự!' });
+    return res.status(400).json({ error: 'Tên tài khoản phải từ 3 ký tự trở lên!' });
   }
   if (!pin || pin.trim().length < 4) {
     return res.status(400).json({ error: 'Mã PIN bảo mật phải từ 4 số trở lên!' });
@@ -83,13 +86,10 @@ app.post('/api/register', (req, res) => {
   const tgId = String(tgUser.id);
 
   const db = loadDB();
-
-  // Kiểm tra xem telegram này đã đăng ký chưa
   if (db.users[tgId]) {
     return res.status(400).json({ error: 'Tài khoản Telegram này đã đăng ký rồi!' });
   }
 
-  // Kiểm tra trùng tên tài khoản với người khác
   const isNameTaken = Object.values(db.users).some(u => u.username.toLowerCase() === username.trim().toLowerCase());
   if (isNameTaken) {
     return res.status(400).json({ error: 'Tên tài khoản này đã có người dùng, vui lòng chọn tên khác!' });
@@ -100,18 +100,18 @@ app.post('/api/register', (req, res) => {
     telegram_id: tgId,
     username: username.trim(),
     pin: pin.trim(),
-    balance: 0,
+    balance: 0, // Tính bằng VNĐ
     fuel_expires_at: now,
     last_collected_at: now,
-    rate_per_sec: 0.0000003,
+    rate_per_sec: RATE_PER_SEC_VND,
     created_at: now
   };
 
   saveDB(db);
-  return res.json({ success: true, message: 'Đăng ký tài khoản thành công!' });
+  return res.json({ success: true });
 });
 
-// 4. API: Lấy trạng thái tài khoản (Kiểm tra đã đăng ký hay chưa)
+// 4. API: Lấy thông tin tài khoản
 app.post('/api/user-status', (req, res) => {
   const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -123,12 +123,12 @@ app.post('/api/user-status', (req, res) => {
   const db = loadDB();
   const user = db.users[tgId];
 
-  // Nếu chưa đăng ký -> Bắt buộc ra màn hình tạo tài khoản
   if (!user) {
     return res.json({ success: true, is_registered: false });
   }
 
-  // Đã đăng ký -> Cập nhật số dư và trả về dữ liệu
+  // Luôn cập nhật tốc độ sang VNĐ
+  user.rate_per_sec = RATE_PER_SEC_VND;
   calculateBalance(user);
   saveDB(db);
 
@@ -142,7 +142,7 @@ app.post('/api/user-status', (req, res) => {
   });
 });
 
-// 5. API: Tạo phiên xem quảng cáo Monetag
+// 5. API: Tạo link xem Monetag
 app.post('/api/create-ad-session', (req, res) => {
   const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -164,16 +164,15 @@ app.post('/api/create-ad-session', (req, res) => {
   };
   saveDB(db);
 
-  // Link Direct link gắn ymid/sub_id_1 = clickId
   const adUrl = `${MONETAG_LINK}?sub_id_1=${clickId}&ymid=${clickId}`;
   return res.json({ success: true, adUrl });
 });
 
-// 6. API: Monetag Postback Webhook
+// 6. API: Postback Monetag
 app.get('/api/postback', (req, res) => {
   const { click_id, secret } = req.query;
 
-  if (secret !== SECRET_KEY) return res.status(403).send('Forbidden: Sai Secret');
+  if (secret !== SECRET_KEY) return res.status(403).send('Forbidden');
 
   const db = loadDB();
   const claim = db.claims[click_id];
@@ -181,7 +180,6 @@ app.get('/api/postback', (req, res) => {
   if (!claim) return res.status(404).send('Not found');
   if (claim.status !== 'PENDING') return res.status(400).send('Already claimed');
 
-  // Chống bot: Xem tối thiểu 10 giây
   if ((Date.now() - claim.created_at) < 10000) {
     return res.status(400).send('Invalid watch time');
   }
@@ -193,7 +191,7 @@ app.get('/api/postback', (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     calculateBalance(user);
 
-    // Cộng dồn 10 phút (600s)
+    // Nạp dồn 10 phút (600s)
     if (user.fuel_expires_at > now) {
       user.fuel_expires_at += 600;
     } else {
