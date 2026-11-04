@@ -106,7 +106,7 @@
 
   <div id="update-banner">🔄 Đang cập nhật phiên bản mới nhất...</div>
 
-  <!-- MÀN HÌNH KHÓA (CHỐNG NHIỀU NICK TRÊN 1 MÁY) -->
+  <!-- MÀN HÌNH KHÓA CHẶT (CHỐNG NHIỀU NICK TRÊN 1 PHẦN CỨNG MÁY) -->
   <div id="blocked-screen">
     <h2 style="color: #ff4757;">⛔ TRUY CẬP BỊ TỪ CHỐI</h2>
     <p id="blocked-msg" style="color: #ccc; font-size: 14px; line-height: 1.6;">
@@ -194,7 +194,7 @@
       </div>
     </div>
 
-    <!-- TAB 3: ĐỔI THƯỞNG -->
+    <!-- TAB 3: ĐỔI THƯỞNG (MIN RÚT 5.000 VNĐ) -->
     <div id="tab-withdraw" style="display: none;">
       <div class="box">
         <h3 style="margin-top: 0; color: #00ff88; text-align: center;">💳 ĐỔI THƯỞNG VỀ TÀI KHOẢN</h3>
@@ -202,7 +202,7 @@
 
         <div class="input-group">
           <label>Số tiền muốn nhận (VNĐ):</label>
-          <input type="number" id="wd-amount" class="input-field" placeholder="Tối thiểu 1.000 VNĐ">
+          <input type="number" id="wd-amount" class="input-field" placeholder="Tối thiểu 5.000 VNĐ">
         </div>
 
         <div class="input-group">
@@ -283,52 +283,54 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // === BỘ TÍNH TOÁN DẤU VÂN TAY PHẦN CỨNG BẤT BIẾN (CANVAS + GPU + SCREEN) ===
-    function calculateHardwareFingerprint() {
+    // === BỘ ĐO DẤU VÂN TAY PHẦN CỨNG BẤT BIẾN (KHÔNG BỊ ẢNH HƯỞNG BỞI XOAY MÀN HÌNH HAY ĐỔI NICK) ===
+    function getStableHardwareFingerprint() {
       try {
+        // Cố định độ phân giải (Bất biến dù xoay ngang hay xoay dọc)
+        const screenRes = Math.max(screen.width, screen.height) + 'x' + Math.min(screen.width, screen.height);
+        const colorDepth = screen.colorDepth || 24;
+        const cores = navigator.hardwareConcurrency || 2;
+        const memory = navigator.deviceMemory || 4;
+        const touch = navigator.maxTouchPoints || 0;
+        const platform = navigator.platform || '';
+
+        let gpu = '';
         const canvas = document.createElement('canvas');
-        canvas.width = 180;
-        canvas.height = 40;
+        canvas.width = 16;
+        canvas.height = 16;
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
+          }
+        }
+
+        canvas.width = 120;
+        canvas.height = 30;
         const ctx = canvas.getContext('2d');
         ctx.textBaseline = 'top';
-        ctx.font = '14px Arial';
+        ctx.font = '13px Arial';
         ctx.fillStyle = '#ff5500';
-        ctx.fillRect(100, 2, 50, 15);
+        ctx.fillRect(50, 0, 40, 15);
         ctx.fillStyle = '#00ff88';
-        ctx.fillText('DeviceID_AntiFraud_2026', 2, 12);
-        const canvasHash = canvas.toDataURL();
+        ctx.fillText('DeviceLock_2026', 2, 8);
+        const canvasHash = canvas.toDataURL().substring(50, 120);
 
-        let glInfo = '';
-        try {
-          const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-          if (gl) {
-            const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-            if (dbg) glInfo = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
-          }
-        } catch (e) {}
+        const raw = [screenRes, colorDepth, cores, memory, touch, platform, gpu, canvasHash].join('###');
 
-        const raw = [
-          screen.width,
-          screen.height,
-          screen.colorDepth,
-          navigator.hardwareConcurrency || 2,
-          navigator.deviceMemory || 4,
-          glInfo,
-          canvasHash.substring(canvasHash.length - 80)
-        ].join(':::');
-
-        let hash = 0;
+        let hash = 5381;
         for (let i = 0; i < raw.length; i++) {
-          hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+          hash = ((hash << 5) + hash) + raw.charCodeAt(i);
           hash |= 0;
         }
         return 'hw_' + Math.abs(hash).toString(36);
-      } catch (err) {
-        return 'hw_dev_' + screen.width + 'x' + screen.height;
+      } catch (e) {
+        return 'hw_fallback_' + Math.max(screen.width, screen.height);
       }
     }
 
-    const hardwareFingerprint = calculateHardwareFingerprint();
+    const hardwareFingerprint = getStableHardwareFingerprint();
 
     let balance = 0;
     let fuelExpiresAt = 0;
@@ -343,31 +345,27 @@
       return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
     }
 
-    // LƯU TRỮ VÀO ĐÁM MÂY TELEGRAM CHỐNG MẤT SỐ DƯ
-    function saveToCloud(userData) {
+    // LƯU PHIÊN ĐĂNG NHẬP VĨNH VIỄN
+    function savePersistentSession(userData) {
+      localStorage.setItem('saved_auto_user_session', JSON.stringify(userData));
       if (tg.CloudStorage) {
-        tg.CloudStorage.setItem('tg_backup_account_data', JSON.stringify(userData), (err, res) => {});
+        tg.CloudStorage.setItem('saved_tg_cloud_session', JSON.stringify(userData), (e, r) => {});
       }
-      localStorage.setItem('local_backup_account_data', JSON.stringify(userData));
     }
 
-    function getCloudBackup(callback) {
+    function getPersistentSession(callback) {
+      const local = localStorage.getItem('saved_auto_user_session');
+      if (local) {
+        try { return callback(JSON.parse(local)); } catch (e) {}
+      }
       if (tg.CloudStorage) {
-        tg.CloudStorage.getItem('tg_backup_account_data', (err, val) => {
+        tg.CloudStorage.getItem('saved_tg_cloud_session', (err, val) => {
           if (!err && val) {
             try { return callback(JSON.parse(val)); } catch (e) {}
-          }
-          const local = localStorage.getItem('local_backup_account_data');
-          if (local) {
-            try { return callback(JSON.parse(local)); } catch (e) {}
           }
           callback(null);
         });
       } else {
-        const local = localStorage.getItem('local_backup_account_data');
-        if (local) {
-          try { return callback(JSON.parse(local)); } catch (e) {}
-        }
         callback(null);
       }
     }
@@ -407,7 +405,7 @@
       }
     }
 
-    // TẢI VÀ ĐỒNG BỘ DỮ LIỆU
+    // TỰ ĐỘNG ĐĂNG NHẬP VÀ ĐỒNG BỘ DỮ LIỆU
     async function loadData() {
       try {
         const res = await fetch('/api/user-status', {
@@ -420,7 +418,7 @@
         });
         const data = await res.json();
 
-        // NẾU PHÁT HIỆN TẠO NHIỀU NICK TRÊN CÙNG PHẦN CỨNG
+        // NẾU PHÁT HIỆN DÙNG TÀI KHOẢN KHÁC TRÊN CÙNG MÁY PHẦN CỨNG NÀY
         if (data.device_blocked) {
           document.getElementById('blocked-screen').style.display = 'block';
           document.getElementById('blocked-msg').innerText = data.error;
@@ -431,20 +429,21 @@
 
         if (data.success) {
           if (!data.is_registered) {
-            // TỰ ĐỘNG KHÔI PHỤC NẾU SERVER RENDER BỊ RESTART LÀM MẤT DỮ LIỆU
-            getCloudBackup(async (backup) => {
-              if (backup && backup.username) {
+            // TỰ ĐỘNG KHÔI PHỤC VÀ ĐĂNG NHẬP LẠI KHÔNG BỊ VĂNG RA NGOÀI
+            getPersistentSession(async (savedSession) => {
+              if (savedSession && savedSession.username) {
                 await fetch('/api/restore-account', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ initData: tg.initData, backup: backup })
+                  body: JSON.stringify({ initData: tg.initData, backup: savedSession })
                 });
-                return loadData(); // Tải lại mượt mà không mất số dư
+                return loadData(); // Tự động vào thẳng game!
               }
               document.getElementById('register-screen').style.display = 'block';
               document.getElementById('main-content').style.display = 'none';
             });
           } else {
+            // ĐÃ ĐĂNG NHẬP THÀNH CÔNG -> VÀO THẲNG GAME
             document.getElementById('register-screen').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
             document.getElementById('user-display').innerText = `👤 Tài khoản: ${data.user.username}`;
@@ -463,8 +462,8 @@
 
             renderFriends(data.user.friends || []);
 
-            // SAO LƯU SỐ DƯ LIÊN TỤC LÊN ĐÁM MÂY TELEGRAM
-            saveToCloud(data.user);
+            // LƯU BẢO ĐẢM TỰ ĐỘNG ĐĂNG NHẬP VĨNH VIỄN
+            savePersistentSession(data.user);
           }
         }
       } catch (err) {}
@@ -549,7 +548,7 @@
       alert("📋 Đã sao chép Link giới thiệu!");
     }
 
-    // ĐĂNG KÝ (GỬI KÈM DẤU VÂN TAY PHẦN CỨNG)
+    // ĐĂNG KÝ
     async function handleRegister() {
       const username = document.getElementById('reg-username').value;
       const pin = document.getElementById('reg-pin').value;
@@ -571,7 +570,7 @@
         });
         const data = await res.json();
         if (data.success) {
-          alert("🎉 Chúc mừng! Tài khoản đã tạo và liên kết thành công với phần cứng máy này!");
+          alert("🎉 Chúc mừng! Tài khoản đã tạo và liên kết thành công với máy này!");
           loadData();
         } else {
           alert(data.error || "Đăng ký thất bại!");
@@ -581,7 +580,7 @@
       }
     }
 
-    // RÚT TIỀN (TRỪ SỐ DƯ NGAY)
+    // RÚT TIỀN (CHUẨN MIN RÚT 5.000 VNĐ)
     async function handleWithdraw() {
       const amount = parseFloat(document.getElementById('wd-amount').value);
       const pin = document.getElementById('wd-pin').value;
@@ -590,7 +589,7 @@
       const accountNumber = document.getElementById('wd-account-number').value;
       const accountName = document.getElementById('wd-account-name').value;
 
-      if (!amount || amount < 1000) return alert("Số tiền đổi thưởng tối thiểu là 1.000 VNĐ!");
+      if (!amount || amount < 5000) return alert("Số tiền đổi thưởng tối thiểu là 5.000 VNĐ!");
       if (amount > balance) return alert("Số dư khả dụng không đủ!");
       if (!accountNumber || !accountName) return alert("Vui lòng điền số tài khoản và tên chủ tài khoản!");
       if (!pin) return alert("Vui lòng nhập mã PIN bảo mật!");
@@ -633,7 +632,6 @@
       }
     }
 
-    // TÍNH TOÁN TIỀN TỰ ĐỘNG CHẠY NGẦM
     setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       const remaining = Math.max(0, fuelExpiresAt - now);
