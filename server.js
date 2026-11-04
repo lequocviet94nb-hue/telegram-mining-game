@@ -25,7 +25,9 @@ const APP_URL = 'https://mayintien-tele.onrender.com';
 
 const RATE_PER_SEC_VND = 0.01;
 const MIN_WATCH_TIME_MS = 15000;
+const MIN_WITHDRAW_VND = 5000; // MIN RÚT MỚI: 5.000 VNĐ
 
+// === DATABASE LƯU TRỮ VĨNH VIỄN ===
 const DB_FILE = path.join(__dirname, 'database.json');
 
 function loadDB() {
@@ -141,7 +143,6 @@ function verifyTelegram(initDataStr) {
   }
 }
 
-// Tính tiền khi tắt app mở lại (Bảo toàn số dư 100%)
 function calculateBalance(user) {
   const now = Math.floor(Date.now() / 1000);
   const effectiveEnd = Math.min(now, user.fuel_expires_at);
@@ -154,13 +155,13 @@ function calculateBalance(user) {
   return user;
 }
 
-// 1. ĐĂNG KÝ TÀI KHOẢN (KHÓA CỨNG DẤU VÂN TAY PHẦN CỨNG 1 MÁY = 1 ACC)
+// 1. ĐĂNG KÝ TÀI KHOẢN (KHÓA CỨNG 1 MÁY PHẦN CỨNG = 1 ACC DUY NHẤT)
 app.post('/api/register', (req, res) => {
   const { initData, username, pin, hardwareFingerprint, refCode } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
   if (!hardwareFingerprint || hardwareFingerprint.length < 5) {
-    return res.status(400).json({ error: 'Không thể nhận diện phần cứng thiết bị!' });
+    return res.status(400).json({ error: 'Lỗi nhận diện phần cứng thiết bị!' });
   }
   if (!username || username.trim().length < 3) return res.status(400).json({ error: 'Tên phải từ 3 ký tự!' });
   if (!pin || pin.trim().length < 4) return res.status(400).json({ error: 'Mã PIN từ 4 số trở lên!' });
@@ -171,14 +172,15 @@ app.post('/api/register', (req, res) => {
 
   const db = loadDB();
 
-  // KIỂM TRA PHẦN CỨNG: Nếu máy này đã từng liên kết với tài khoản Telegram khác
-  if (db.devices && db.devices[hardwareFingerprint] && db.devices[hardwareFingerprint] !== tgId) {
+  // KIỂM TRA PHẦN CỨNG: Nếu thiết bị này đã từng liên kết với tài khoản Telegram khác
+  if (db.devices && db.devices[hardwareFingerprint] && db.devices[hardwareFingerprint].telegram_id !== tgId) {
+    const ownerName = db.devices[hardwareFingerprint].username || 'khác';
     return res.status(400).json({
-      error: '⛔ THIẾT BỊ NÀY ĐÃ ĐĂNG KÝ 1 TÀI KHOẢN RỒI! Mỗi thiết bị phần cứng chỉ được phép chơi duy nhất 1 tài khoản.'
+      error: `⛔ THIẾT BỊ NÀY ĐÃ ĐĂNG KÝ TÀI KHOẢN: [${ownerName}]! Mỗi thiết bị phần cứng chỉ được phép sử dụng duy nhất 1 tài khoản.`
     });
   }
 
-  if (db.users[tgId]) return res.status(400).json({ error: 'Tài khoản này đã tồn tại!' });
+  if (db.users[tgId]) return res.status(400).json({ error: 'Tài khoản Telegram này đã có tài khoản game!' });
 
   const isNameTaken = Object.values(db.users).some(u => u.username.toLowerCase() === username.trim().toLowerCase());
   if (isNameTaken) return res.status(400).json({ error: 'Tên tài khoản này đã có người dùng!' });
@@ -207,13 +209,13 @@ app.post('/api/register', (req, res) => {
   };
 
   if (!db.devices) db.devices = {};
-  db.devices[hardwareFingerprint] = tgId;
+  db.devices[hardwareFingerprint] = { telegram_id: tgId, username: username.trim() };
 
   saveDB(db);
   return res.json({ success: true });
 });
 
-// 2. TỰ ĐỘNG KHÔI PHỤC TÀI KHOẢN TỪ ĐÁM MÂY TELEGRAM (NẾU RENDER RESTART LÀM MẤT DỮ LIỆU)
+// 2. TỰ ĐỘNG ĐĂNG NHẬP / KHÔI PHỤC NẾU SERVER RESTART
 app.post('/api/restore-account', (req, res) => {
   const { initData, backup } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -241,15 +243,14 @@ app.post('/api/restore-account', (req, res) => {
     };
     if (backup.hardwareFingerprint) {
       if (!db.devices) db.devices = {};
-      db.devices[backup.hardwareFingerprint] = tgId;
+      db.devices[backup.hardwareFingerprint] = { telegram_id: tgId, username: backup.username };
     }
     saveDB(db);
-    console.log(`[ĐÁM MÂY] Đã tự động khôi phục số dư và tài khoản an toàn cho user: ${tgId}`);
   }
   return res.json({ success: true });
 });
 
-// 3. LẤY TRẠNG THÁI TÀI KHOẢN
+// 3. LẤY TRẠNG THÁI TÀI KHOẢN & KIỂM TRA KHÓA THIẾT BỊ
 app.post('/api/user-status', (req, res) => {
   const { initData, hardwareFingerprint } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -260,13 +261,16 @@ app.post('/api/user-status', (req, res) => {
 
   const db = loadDB();
 
-  // Kiểm tra khóa thiết bị
-  if (hardwareFingerprint && db.devices && db.devices[hardwareFingerprint] && db.devices[hardwareFingerprint] !== tgId) {
-    return res.json({
-      success: false,
-      device_blocked: true,
-      error: '⛔ THIẾT BỊ NÀY ĐÃ ĐĂNG KÝ TÀI KHOẢN KHÁC! Mỗi máy chỉ được chơi duy nhất 1 tài khoản.'
-    });
+  // KIỂM TRA KHÓA PHẦN CỨNG CHẶT CHẼ
+  if (hardwareFingerprint && db.devices && db.devices[hardwareFingerprint]) {
+    const boundDevice = db.devices[hardwareFingerprint];
+    if (boundDevice.telegram_id !== tgId) {
+      return res.json({
+        success: false,
+        device_blocked: true,
+        error: `⛔ THIẾT BỊ NÀY ĐÃ BỊ KHÓA VỚI TÀI KHOẢN [${boundDevice.username}]! Không thể sử dụng tài khoản khác trên máy này.`
+      });
+    }
   }
 
   const user = db.users[tgId];
@@ -308,7 +312,7 @@ app.post('/api/user-status', (req, res) => {
   });
 });
 
-// 4. API RÚT TIỀN
+// 4. API RÚT TIỀN (MIN RÚT 5.000 VNĐ & TRỪ SỐ DƯ NGAY)
 app.post('/api/withdraw', async (req, res) => {
   const { initData, amount, pin, method, bankName, accountNumber, accountName } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -329,15 +333,15 @@ app.post('/api/withdraw', async (req, res) => {
   calculateBalance(user);
 
   const withdrawAmount = parseFloat(amount);
-  if (isNaN(withdrawAmount) || withdrawAmount < 1000) {
-    return res.status(400).json({ error: 'Số tiền rút tối thiểu là 1.000 VNĐ!' });
+  if (isNaN(withdrawAmount) || withdrawAmount < MIN_WITHDRAW_VND) {
+    return res.status(400).json({ error: `Số tiền đổi thưởng tối thiểu là ${MIN_WITHDRAW_VND.toLocaleString('vi-VN')} VNĐ!` });
   }
 
   if (user.balance < withdrawAmount) {
     return res.status(400).json({ error: 'Số dư khả dụng không đủ để rút!' });
   }
 
-  // TRỪ SỐ DƯ NGAY LẬP TỨC
+  // TRỪ TIỀN NGAY LẬP TỨC
   user.balance -= withdrawAmount;
   user.last_collected_at = Math.floor(Date.now() / 1000);
 
@@ -373,7 +377,7 @@ app.post('/api/withdraw', async (req, res) => {
 
   return res.json({
     success: true,
-    message: `🎉 Yêu cầu đổi thưởng ${withdrawAmount.toLocaleString('vi-VN')} VNĐ thành công! Số dư đã được trừ.`
+    message: `🎉 Yêu cầu đổi thưởng ${withdrawAmount.toLocaleString('vi-VN')} VNĐ thành công! Tiền đã được trừ khỏi số dư.`
   });
 });
 
