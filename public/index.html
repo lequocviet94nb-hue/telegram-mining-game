@@ -44,6 +44,11 @@
       border-radius: 12px; padding: 12px; margin-top: 15px; text-align: left; font-size: 12px; color: #ffdd99;
     }
 
+    #blocked-screen {
+      display: none; padding: 30px 15px; background: #1e1318; border: 1px solid #ff4757;
+      border-radius: 16px; margin-top: 30px;
+    }
+
     #ad-modal {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: #000; z-index: 99999; flex-direction: column;
@@ -88,7 +93,6 @@
     }
     .progress-fill { height: 100%; background: #00ff88; width: 0%; }
 
-    /* Bảng Quản trị Admin */
     .admin-order-card {
       background: #161722; border: 1px solid #ffaa00; border-radius: 12px; padding: 12px; margin-bottom: 12px; font-size: 13px;
     }
@@ -101,6 +105,14 @@
 <body>
 
   <div id="update-banner">🔄 Đang cập nhật phiên bản mới nhất...</div>
+
+  <!-- MÀN HÌNH KHÓA (CHỐNG NHIỀU NICK TRÊN 1 MÁY) -->
+  <div id="blocked-screen">
+    <h2 style="color: #ff4757;">⛔ TRUY CẬP BỊ TỪ CHỐI</h2>
+    <p id="blocked-msg" style="color: #ccc; font-size: 14px; line-height: 1.6;">
+      Mỗi thiết bị phần cứng chỉ được phép sử dụng duy nhất 1 tài khoản để đảm bảo tính công bằng.
+    </p>
+  </div>
 
   <!-- MÀN HÌNH QUẢNG CÁO NỘI BỘ -->
   <div id="ad-modal">
@@ -116,7 +128,7 @@
   <!-- 1. MÀN HÌNH ĐĂNG KÝ -->
   <div id="register-screen" style="display: none;">
     <h2>📝 TẠO TÀI KHOẢN MỚI</h2>
-    <p style="color: #8c93a8; font-size: 14px;">Tài khoản sẽ được liên kết vĩnh viễn với thiết bị này.</p>
+    <p style="color: #8c93a8; font-size: 14px;">Tài khoản sẽ được liên kết vĩnh viễn với phần cứng thiết bị này.</p>
     <div class="box">
       <div class="input-group">
         <label>Tên tài khoản / Nickname:</label>
@@ -182,7 +194,7 @@
       </div>
     </div>
 
-    <!-- TAB 3: ĐỔI THƯỞNG / RÚT TIỀN -->
+    <!-- TAB 3: ĐỔI THƯỞNG -->
     <div id="tab-withdraw" style="display: none;">
       <div class="box">
         <h3 style="margin-top: 0; color: #00ff88; text-align: center;">💳 ĐỔI THƯỞNG VỀ TÀI KHOẢN</h3>
@@ -241,7 +253,7 @@
       </div>
     </div>
 
-    <!-- TAB 4: QUẢN TRỊ ADMIN BÍ MẬT (CHỈ HIỆN VỚI TÀI KHOẢN CỦA BẠN) -->
+    <!-- TAB 4: QUẢN TRỊ ADMIN -->
     <div id="tab-admin" style="display: none;">
       <div class="box">
         <h3 style="margin-top: 0; color: #ffaa00; text-align: center;">👑 BẢNG ĐIỀU KHIỂN QUẢN TRỊ</h3>
@@ -251,7 +263,6 @@
       </div>
     </div>
 
-    <!-- THANH MENU TAB Ở DƯỚI CÙNG -->
     <div class="tab-bar">
       <div id="tab-btn-1" class="tab-item active" onclick="switchTab(1)">
         <span class="tab-icon">⚡</span> Máy In Tiền
@@ -262,7 +273,6 @@
       <div id="tab-btn-3" class="tab-item" onclick="switchTab(3)">
         <span class="tab-icon">💳</span> Đổi Thưởng
       </div>
-      <!-- Tab Admin chỉ hiện với Bạn -->
       <div id="tab-btn-4" class="tab-item" style="display: none;" onclick="switchTab(4)">
         <span class="tab-icon">👑</span> Quản Trị
       </div>
@@ -273,11 +283,52 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    let deviceId = localStorage.getItem('app_device_id');
-    if (!deviceId) {
-      deviceId = 'dev_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-      localStorage.setItem('app_device_id', deviceId);
+    // === BỘ TÍNH TOÁN DẤU VÂN TAY PHẦN CỨNG BẤT BIẾN (CANVAS + GPU + SCREEN) ===
+    function calculateHardwareFingerprint() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 180;
+        canvas.height = 40;
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#ff5500';
+        ctx.fillRect(100, 2, 50, 15);
+        ctx.fillStyle = '#00ff88';
+        ctx.fillText('DeviceID_AntiFraud_2026', 2, 12);
+        const canvasHash = canvas.toDataURL();
+
+        let glInfo = '';
+        try {
+          const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+          if (gl) {
+            const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+            if (dbg) glInfo = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
+          }
+        } catch (e) {}
+
+        const raw = [
+          screen.width,
+          screen.height,
+          screen.colorDepth,
+          navigator.hardwareConcurrency || 2,
+          navigator.deviceMemory || 4,
+          glInfo,
+          canvasHash.substring(canvasHash.length - 80)
+        ].join(':::');
+
+        let hash = 0;
+        for (let i = 0; i < raw.length; i++) {
+          hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+          hash |= 0;
+        }
+        return 'hw_' + Math.abs(hash).toString(36);
+      } catch (err) {
+        return 'hw_dev_' + screen.width + 'x' + screen.height;
+      }
     }
+
+    const hardwareFingerprint = calculateHardwareFingerprint();
 
     let balance = 0;
     let fuelExpiresAt = 0;
@@ -290,6 +341,35 @@
 
     function formatVND(amount) {
       return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
+    }
+
+    // LƯU TRỮ VÀO ĐÁM MÂY TELEGRAM CHỐNG MẤT SỐ DƯ
+    function saveToCloud(userData) {
+      if (tg.CloudStorage) {
+        tg.CloudStorage.setItem('tg_backup_account_data', JSON.stringify(userData), (err, res) => {});
+      }
+      localStorage.setItem('local_backup_account_data', JSON.stringify(userData));
+    }
+
+    function getCloudBackup(callback) {
+      if (tg.CloudStorage) {
+        tg.CloudStorage.getItem('tg_backup_account_data', (err, val) => {
+          if (!err && val) {
+            try { return callback(JSON.parse(val)); } catch (e) {}
+          }
+          const local = localStorage.getItem('local_backup_account_data');
+          if (local) {
+            try { return callback(JSON.parse(local)); } catch (e) {}
+          }
+          callback(null);
+        });
+      } else {
+        const local = localStorage.getItem('local_backup_account_data');
+        if (local) {
+          try { return callback(JSON.parse(local)); } catch (e) {}
+        }
+        callback(null);
+      }
     }
 
     function switchTab(tabIndex) {
@@ -327,19 +407,43 @@
       }
     }
 
+    // TẢI VÀ ĐỒNG BỘ DỮ LIỆU
     async function loadData() {
       try {
         const res = await fetch('/api/user-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: tg.initData, deviceId: deviceId })
+          body: JSON.stringify({
+            initData: tg.initData,
+            hardwareFingerprint: hardwareFingerprint
+          })
         });
         const data = await res.json();
 
+        // NẾU PHÁT HIỆN TẠO NHIỀU NICK TRÊN CÙNG PHẦN CỨNG
+        if (data.device_blocked) {
+          document.getElementById('blocked-screen').style.display = 'block';
+          document.getElementById('blocked-msg').innerText = data.error;
+          document.getElementById('register-screen').style.display = 'none';
+          document.getElementById('main-content').style.display = 'none';
+          return;
+        }
+
         if (data.success) {
           if (!data.is_registered) {
-            document.getElementById('register-screen').style.display = 'block';
-            document.getElementById('main-content').style.display = 'none';
+            // TỰ ĐỘNG KHÔI PHỤC NẾU SERVER RENDER BỊ RESTART LÀM MẤT DỮ LIỆU
+            getCloudBackup(async (backup) => {
+              if (backup && backup.username) {
+                await fetch('/api/restore-account', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ initData: tg.initData, backup: backup })
+                });
+                return loadData(); // Tải lại mượt mà không mất số dư
+              }
+              document.getElementById('register-screen').style.display = 'block';
+              document.getElementById('main-content').style.display = 'none';
+            });
           } else {
             document.getElementById('register-screen').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
@@ -350,7 +454,6 @@
             userTelegramId = data.user.telegram_id;
             isAdminUser = data.is_admin;
 
-            // NẾU LÀ ADMIN THÌ HIỆN NÚT TAB QUẢN TRỊ
             if (isAdminUser) {
               document.getElementById('tab-btn-4').style.display = 'flex';
             }
@@ -359,12 +462,14 @@
             document.getElementById('ref-link-input').value = refLink;
 
             renderFriends(data.user.friends || []);
+
+            // SAO LƯU SỐ DƯ LIÊN TỤC LÊN ĐÁM MÂY TELEGRAM
+            saveToCloud(data.user);
           }
         }
       } catch (err) {}
     }
 
-    // Tải danh sách đơn rút cho Admin
     async function loadAdminOrders() {
       const listEl = document.getElementById('admin-orders-list');
       listEl.innerHTML = "Đang tải dữ liệu...";
@@ -444,6 +549,7 @@
       alert("📋 Đã sao chép Link giới thiệu!");
     }
 
+    // ĐĂNG KÝ (GỬI KÈM DẤU VÂN TAY PHẦN CỨNG)
     async function handleRegister() {
       const username = document.getElementById('reg-username').value;
       const pin = document.getElementById('reg-pin').value;
@@ -459,13 +565,13 @@
             initData: tg.initData,
             username: username,
             pin: pin,
-            deviceId: deviceId,
+            hardwareFingerprint: hardwareFingerprint,
             refCode: refCode
           })
         });
         const data = await res.json();
         if (data.success) {
-          alert("🎉 Chúc mừng! Bạn đã tạo tài khoản thành công!");
+          alert("🎉 Chúc mừng! Tài khoản đã tạo và liên kết thành công với phần cứng máy này!");
           loadData();
         } else {
           alert(data.error || "Đăng ký thất bại!");
@@ -475,7 +581,7 @@
       }
     }
 
-    // Xử lý đổi thưởng (Trừ tiền ngay lập tức)
+    // RÚT TIỀN (TRỪ SỐ DƯ NGAY)
     async function handleWithdraw() {
       const amount = parseFloat(document.getElementById('wd-amount').value);
       const pin = document.getElementById('wd-pin').value;
@@ -527,6 +633,7 @@
       }
     }
 
+    // TÍNH TOÁN TIỀN TỰ ĐỘNG CHẠY NGẦM
     setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       const remaining = Math.max(0, fuelExpiresAt - now);
