@@ -3,12 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Máy In Tiền AFK</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
       margin: 0; padding: 15px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0f1015; color: #ffffff; text-align: center;
+    }
+    /* Thanh thông báo cập nhật */
+    #update-banner {
+      display: none; background: #00ff88; color: #000; padding: 10px; font-weight: bold;
+      border-radius: 10px; margin-bottom: 15px; font-size: 13px; animation: pulse 1s infinite alternate;
     }
     .box {
       background: #1b1d28; border-radius: 16px; padding: 18px; margin-bottom: 15px;
@@ -24,7 +32,6 @@
     .status-running { color: #00ff88; font-weight: bold; }
     .status-stopped { color: #ff4757; font-weight: bold; }
 
-    /* Nút bấm hành động */
     .btn-action {
       border: none; padding: 16px; font-size: 16px; font-weight: bold; border-radius: 25px;
       width: 100%; cursor: pointer; margin-bottom: 12px; transition: transform 0.1s;
@@ -39,7 +46,6 @@
       box-shadow: 0 4px 15px rgba(255,102,0,0.3);
     }
 
-    /* Khung hướng dẫn Auto Clicker */
     .auto-guide {
       background: rgba(255, 170, 0, 0.1); border: 1px dashed #ffaa00;
       border-radius: 12px; padding: 12px; margin-top: 15px; text-align: left; font-size: 12px; color: #ffdd99;
@@ -91,7 +97,10 @@
 </head>
 <body>
 
-  <!-- MÀN HÌNH QUẢNG CÁO NỘI BỘ (KHÔNG THOÁT GAME) -->
+  <!-- BANNER TỰ ĐỘNG THÔNG BÁO CẬP NHẬT -->
+  <div id="update-banner">🔄 Đang cập nhật phiên bản mới nhất...</div>
+
+  <!-- MÀN HÌNH QUẢNG CÁO NỘI BỘ -->
   <div id="ad-modal">
     <div id="ad-top-bar">
       <div id="ad-title" class="ad-title">📺 QUẢNG CÁO (1/2)</div>
@@ -136,17 +145,14 @@
       <div id="status" class="status-stopped">Trạng thái: ĐÃ DỪNG</div>
     </div>
 
-    <!-- NÚT 1: CỘNG TIỀN TƯƠI +2 VNĐ -->
     <button class="btn-action btn-cash" onclick="startDoubleAd('CASH')">
       💰 XEM 2 ADS = NHẬN NGAY +2.00 VNĐ
     </button>
 
-    <!-- NÚT 2: NẠP NHIÊN LIỆU MÁY IN -->
     <button class="btn-action btn-fuel" onclick="startDoubleAd('FUEL')">
       ⚡ XEM 2 ADS = NẠP +10 PHÚT NHIÊN LIỆU
     </button>
 
-    <!-- KHUNG GỢI Ý CẮM AUTO CLICKER -->
     <div class="auto-guide">
       <b>💡 MẸO TREO MÁY RẢNH TAY (AUTO CLICK):</b><br>
       • Bạn có thể tải app <b>Auto Clicker</b> trên CH Play/App Store để cắm máy kiếm tiền tự động 24/24.<br>
@@ -163,6 +169,32 @@
     let ratePerSec = 0.01;
     let currentSessionId = null;
     let timerInterval = null;
+
+    // QUẢN LÝ PHIÊN BẢN ĐỂ TỰ ĐỘNG LÀM MỚI (HOT-RELOAD)
+    let currentAppVersion = null;
+
+    async function checkVersionAndUpdate() {
+      try {
+        const res = await fetch('/api/version?t=' + Date.now());
+        const data = await res.json();
+        if (data.version) {
+          if (currentAppVersion === null) {
+            currentAppVersion = data.version;
+          } else if (currentAppVersion !== data.version) {
+            // Phát hiện bạn vừa commit bản mới trên GitHub!
+            document.getElementById('update-banner').style.display = 'block';
+            setTimeout(() => {
+              // Tự động tải lại trang ngay lập tức
+              window.location.reload(true);
+            }, 1500);
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Tự động kiểm tra phiên bản mới mỗi 20 giây
+    setInterval(checkVersionAndUpdate, 20000);
+    checkVersionAndUpdate();
 
     function formatVND(amount) {
       return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
