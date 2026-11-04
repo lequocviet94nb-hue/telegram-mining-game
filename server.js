@@ -6,7 +6,19 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 app.use(express.json());
+
+// === 1. CHỐNG LƯU CACHE (Bắt Telegram luôn lấy bản mới nhất) ===
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+// === MÃ PHIÊN BẢN TỰ ĐỘNG (Mỗi lần bạn commit, mã này tự đổi) ===
+const SERVER_BUILD_ID = Date.now().toString();
 
 // === CẤU HÌNH BIẾN MÔI TRƯỜNG ===
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -15,7 +27,7 @@ const SECRET_KEY = process.env.SECRET_KEY || 'mysecret123';
 const APP_URL = 'https://mayintien-tele.onrender.com';
 
 const RATE_PER_SEC_VND = 0.01;
-const MIN_WATCH_TIME_MS = 15000; // Tối thiểu 15 giây mỗi video
+const MIN_WATCH_TIME_MS = 15000;
 
 // === DATABASE LƯU TRỮ VĨNH VIỄN ===
 const DB_FILE = path.join(__dirname, 'database.json');
@@ -35,7 +47,7 @@ function saveDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 1. Tự động cài đặt Webhook và Menu Button cho Bot Telegram
+// 2. Tự động cài đặt Webhook và Menu Button cho Bot Telegram
 async function setupTelegramBot() {
   if (!BOT_TOKEN) return;
   try {
@@ -58,7 +70,12 @@ async function setupTelegramBot() {
 }
 setupTelegramBot();
 
-// 2. Webhook Telegram trả lời khi chat /start
+// 3. API Kiểm tra phiên bản mới (Game sẽ liên tục hỏi server xem có bản mới chưa)
+app.get('/api/version', (req, res) => {
+  res.json({ version: SERVER_BUILD_ID });
+});
+
+// 4. Webhook Telegram phản hồi tin nhắn /start
 app.post('/api/telegram-webhook', async (req, res) => {
   const { message } = req.body;
   if (message && message.text && message.text.startsWith('/start')) {
@@ -87,7 +104,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-// 3. Xác thực Telegram initData
+// 5. Xác thực Telegram initData
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -109,7 +126,7 @@ function verifyTelegram(initDataStr) {
   }
 }
 
-// 4. Tính toán tiền in tự động
+// 6. Tính toán tiền in tự động
 function calculateBalance(user) {
   const now = Math.floor(Date.now() / 1000);
   const effectiveEnd = Math.min(now, user.fuel_expires_at);
@@ -122,7 +139,7 @@ function calculateBalance(user) {
   return user;
 }
 
-// 5. API: Đăng ký tài khoản
+// 7. API: Đăng ký tài khoản
 app.post('/api/register', (req, res) => {
   const { initData, username, pin } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -156,7 +173,7 @@ app.post('/api/register', (req, res) => {
   return res.json({ success: true });
 });
 
-// 6. API: Lấy thông tin tài khoản
+// 8. API: Lấy thông tin tài khoản
 app.post('/api/user-status', (req, res) => {
   const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -184,7 +201,7 @@ app.post('/api/user-status', (req, res) => {
   });
 });
 
-// 7. API: Bắt đầu Quảng Cáo 1/2 (Nhận loại thưởng: 'CASH' (+2 VNĐ) hoặc 'FUEL' (+10 phút))
+// 9. API: Bắt đầu Quảng Cáo 1/2
 app.post('/api/start-ad-1', (req, res) => {
   const { initData, rewardType } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -201,7 +218,7 @@ app.post('/api/start-ad-1', (req, res) => {
 
   db.sessions[sessionId] = {
     telegram_id: tgId,
-    reward_type: rewardType || 'CASH', // 'CASH' = +2 VNĐ | 'FUEL' = +10 phút
+    reward_type: rewardType || 'CASH',
     step: 1,
     ad1_start: Date.now(),
     ad1_click_id: clickId1,
@@ -213,7 +230,7 @@ app.post('/api/start-ad-1', (req, res) => {
   return res.json({ success: true, sessionId, adUrl });
 });
 
-// 8. API: Chuyển sang Quảng Cáo 2/2
+// 10. API: Chuyển sang Quảng Cáo 2/2
 app.post('/api/start-ad-2', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -222,7 +239,6 @@ app.post('/api/start-ad-2', (req, res) => {
   const sess = db.sessions[sessionId];
   if (!sess) return res.status(404).json({ error: 'Phiên không tồn tại!' });
 
-  // Kiểm tra thời gian video 1: Bắt buộc >= 15s
   const elapsed1 = Date.now() - sess.ad1_start;
   if (elapsed1 < MIN_WATCH_TIME_MS) {
     return res.status(400).json({ error: 'Bạn chưa xem đủ 15 giây quảng cáo 1!' });
@@ -239,7 +255,7 @@ app.post('/api/start-ad-2', (req, res) => {
   return res.json({ success: true, adUrl });
 });
 
-// 9. API: Nhận thưởng sau khi xem xong CẢ 2 QUẢNG CÁO
+// 11. API: Nhận thưởng
 app.post('/api/claim-reward-double', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -255,7 +271,6 @@ app.post('/api/claim-reward-double', (req, res) => {
   if (sess.status === 'COMPLETED') return res.status(400).json({ success: false, message: 'Đã nhận thưởng rồi!' });
   if (sess.step !== 2) return res.status(400).json({ success: false, message: 'Chưa xem xong quảng cáo thứ 2!' });
 
-  // Kiểm tra thời gian video 2: Bắt buộc >= 15s
   const elapsed2 = Date.now() - sess.ad2_start;
   if (elapsed2 < MIN_WATCH_TIME_MS) {
     return res.status(400).json({ success: false, message: 'Bạn chưa xem đủ 15 giây quảng cáo 2!' });
@@ -270,11 +285,9 @@ app.post('/api/claim-reward-double', (req, res) => {
     calculateBalance(user);
 
     if (sess.reward_type === 'CASH') {
-      // CỘNG THẲNG 2 VNĐ TIỀN MẶT
       user.balance += 2.0;
       returnMsg = "🎉 Chúc mừng! Bạn đã nhận trực tiếp +2.00 VNĐ vào số dư!";
     } else {
-      // CỘNG 10 PHÚT NHIÊN LIỆU (600 GIÂY)
       if (user.fuel_expires_at > now) {
         user.fuel_expires_at += 600;
       } else {
@@ -286,11 +299,10 @@ app.post('/api/claim-reward-double', (req, res) => {
   }
 
   saveDB(db);
-  console.log(`[THƯỞNG] User ${tgId} nhận [${sess.reward_type}] thành công!`);
   return res.json({ success: true, message: returnMsg, rewardType: sess.reward_type });
 });
 
-// 10. API Postback Monetag
+// 12. Postback Monetag
 app.get('/api/postback', (req, res) => res.send('OK'));
 
 const PORT = process.env.PORT || 3000;
