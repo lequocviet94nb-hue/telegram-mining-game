@@ -69,9 +69,155 @@
     .admin-order-item { background: #111; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
     .admin-badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
     .badge-pending { background: #553300; color: #ffaa00; }
+
+    /* === BỘ XEM QUẢNG CÁO NỘI BỘ TRONG GAME (KHÔNG THOÁT KHỎI TAB) === */
+    #ad-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100vw; height: 100vh;
+      background: #000;
+      z-index: 999999;
+      flex-direction: column;
+    }
+    #ad-header-bar {
+      height: 60px;
+      background: #15171e;
+      border-bottom: 2px solid #2b2f3a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      position: relative;
+    }
+    .ad-header-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ad-timer-badge {
+      background: #ffaa00;
+      color: #000;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 7px 15px;
+      border-radius: 20px;
+      box-shadow: 0 0 12px rgba(255, 170, 0, 0.5);
+      display: inline-block;
+    }
+    .ad-progress-container {
+      width: 100%;
+      height: 4px;
+      background: #222;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+    }
+    .ad-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ffaa00, #00ff88);
+      transition: width 1s linear;
+    }
+    .btn-ad-next {
+      display: none;
+      background: #ffaa00;
+      color: #000;
+      border: none;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: bold;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(255, 170, 0, 0.6);
+      animation: pulseNext 1s infinite alternate;
+    }
+    .btn-ad-claim {
+      display: none;
+      background: #00ff88;
+      color: #000;
+      border: none;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: bold;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.7);
+      animation: pulseClaim 0.8s infinite alternate;
+    }
+    @keyframes pulseNext {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
+    }
+    @keyframes pulseClaim {
+      from { transform: scale(1); }
+      to { transform: scale(1.08); box-shadow: 0 0 20px #00ff88; }
+    }
+    #ad-body-container {
+      flex: 1;
+      width: 100%;
+      position: relative;
+      background: #0a0b0e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #ad-loading-placeholder {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #888;
+      font-size: 13px;
+      z-index: 1;
+      background: #0b0c10;
+      pointer-events: none;
+    }
+    #ad-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      position: relative;
+      z-index: 2;
+      background: #fff;
+    }
   </style>
 </head>
 <body>
+
+  <!-- MODAL XEM QUẢNG CÁO NỘI BỘ TOÀN MÀN HÌNH (KHÔNG BAO GIỜ THOÁT KHỎI TAB) -->
+  <div id="ad-modal">
+    <div id="ad-header-bar">
+      <div id="ad-status-title" class="ad-header-title">📺 QUẢNG CÁO (1/2)</div>
+      
+      <!-- ĐỒNG HỒ ĐẾM NGƯỢC RÕ RÀNG -->
+      <div id="ad-countdown-badge" class="ad-timer-badge">⏳ Vui lòng chờ: 15s</div>
+      
+      <!-- NÚT CHUYỂN SANG QC 2 (HỖ TRỢ AUTO CLICKER) -->
+      <button id="btn-next-ad" class="btn-ad-next" onclick="proceedToAd2()">⏩ XEM TIẾP QUẢNG CÁO (2/2)</button>
+      
+      <!-- NÚT NHẬN THƯỞNG KHI HOÀN THÀNH (HỖ TRỢ AUTO CLICKER) -->
+      <button id="btn-claim-ad" class="btn-ad-claim" onclick="claimFinalReward()">🎉 NHẬN THƯỞNG & ĐÓNG</button>
+      
+      <div class="ad-progress-container">
+        <div id="ad-progress-fill" class="ad-progress-bar"></div>
+      </div>
+    </div>
+    
+    <div id="ad-body-container">
+      <div id="ad-loading-placeholder">
+        <div style="font-size: 36px; margin-bottom: 12px; animation: pulseNext 1s infinite alternate;">📺</div>
+        <div style="font-weight: bold; color: var(--accent); margin-bottom: 4px;">Đang kết nối quảng cáo tài trợ...</div>
+        <div style="font-size: 11px; color: #888;">Vui lòng xem đủ 15 giây để được cộng thưởng hợp lệ</div>
+      </div>
+      <iframe id="ad-iframe" src="about:blank" allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+    </div>
+  </div>
 
   <!-- MÀN HÌNH BỊ KHÓA (KHI DÙNG NICK KHÁC TRÊN CÙNG MÁY) -->
   <div class="container" id="blocked-screen">
@@ -144,7 +290,7 @@
     <!-- TAB 2: GIỚI THIỆU BẠN BÈ -->
     <div class="container" id="tab-referral" style="display: none;">
       <div class="card">
-        <div class="card-title">Sự Kiện Giới Thiệu Bạn Bè</div>
+        <div class="card-title">Sự Kiện Giới Thiệu Bạn BÈ</div>
         <p style="font-size: 13px; color: #ccc; line-height: 1.5; margin-bottom: 12px;">
           Mời bạn bè cùng tham gia kiếm tiền. Khi 1 người bạn xem đủ <strong>5.000 quảng cáo</strong>, Admin sẽ nhận được thông báo và chuyển ngay <strong>10.000 VNĐ tiền mặt</strong> cho bạn!
         </p>
@@ -294,7 +440,9 @@
     let fuelExpiresAt = 0;
     let ratePerSec = 0.01;
     let currentSessionId = null;
-    let timerInterval = null;
+    let miningTimerInterval = null;
+    let adCountdownInterval = null;
+    let currentAdRewardType = 'CASH';
     let currentAppVersion = null;
     let userTelegramId = null;
     let isAdminUser = false;
@@ -416,7 +564,7 @@
             // ĐÃ ĐĂNG NHẬP THÀNH CÔNG -> VÀO THẲNG GAME
             document.getElementById('register-screen').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
-            document.getElementById('user-display').innerText = `👤 Tài khoản: ${data.user.username}`;
+            document.getElementById('user-display').innerText = '👤 Tài khoản: ' + data.user.username;
             balance = data.user.balance;
             fuelExpiresAt = data.user.fuel_expires_at;
             ratePerSec = data.user.rate_per_sec;
@@ -427,7 +575,7 @@
               document.getElementById('tab-btn-4').style.display = 'flex';
             }
 
-            const refLink = `https://t.me/mayintien2026_bot/play?startapp=ref_${userTelegramId}`;
+            const refLink = 'https://t.me/mayintien2026_bot/play?startapp=ref_' + userTelegramId;
             document.getElementById('ref-link-input').value = refLink;
 
             // Lưu phiên đăng nhập an toàn
@@ -459,29 +607,27 @@
       let html = '';
       friends.forEach(f => {
         const percent = Math.min(100, Math.floor((f.ads_watched / 5000) * 100));
-        html += `
-          <div class="friend-row">
-            <div style="flex: 1; padding-right: 10px;">
-              <div style="font-size: 13px; font-weight: bold;">${f.username}</div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" style="width: ${percent}%;"></div>
-              </div>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-size: 12px; font-weight: bold; color: ${f.is_completed ? 'var(--accent)' : 'var(--fuel)'};">
-                ${f.ads_watched} / 5000 ads
-              </div>
-              <div style="font-size: 10px; color: var(--subtext);">${percent}%</div>
-            </div>
-          </div>
-        `;
+        html += '<div class="friend-row">' +
+          '<div style="flex: 1; padding-right: 10px;">' +
+            '<div style="font-size: 13px; font-weight: bold;">' + f.username + '</div>' +
+            '<div class="progress-bar-bg">' +
+              '<div class="progress-bar-fill" style="width: ' + percent + '%;"></div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="text-align: right;">' +
+            '<div style="font-size: 12px; font-weight: bold; color: ' + (f.is_completed ? 'var(--accent)' : 'var(--fuel)') + ';">' +
+              f.ads_watched + ' / 5000 ads' +
+            '</div>' +
+            '<div style="font-size: 10px; color: var(--subtext);">' + percent + '%</div>' +
+          '</div>' +
+        '</div>';
       });
       container.innerHTML = html;
     }
 
     function startMiningLoop() {
-      if (timerInterval) clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
+      if (miningTimerInterval) clearInterval(miningTimerInterval);
+      miningTimerInterval = setInterval(() => {
         const now = Math.floor(Date.now() / 1000);
         if (now < fuelExpiresAt) {
           balance += ratePerSec;
@@ -492,7 +638,7 @@
           const h = Math.floor(diff / 3600).toString().padStart(2, '0');
           const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
           const s = (diff % 60).toString().padStart(2, '0');
-          document.getElementById('fuel-countdown').innerText = `${h}:${m}:${s}`;
+          document.getElementById('fuel-countdown').innerText = h + ':' + m + ':' + s;
         } else {
           document.getElementById('machine-status').innerText = 'ĐÃ HẾT NHIÊN LIỆU';
           document.getElementById('machine-status').style.color = 'var(--danger)';
@@ -577,51 +723,149 @@
       }
     }
 
-    // XEM QUẢNG CÁO 2 BƯỚC
+    // === HỆ THỐNG XEM QUẢNG CÁO 2 BƯỚC NỘI BỘ (KHÔNG THOÁT KHỎI TAB, ĐẾM NGƯỢC 15S CHUẨN) ===
+    
+    // BƯỚC 1: BẬT QUẢNG CÁO 1/2 VÀ BẮT ĐẦU ĐẾM NGƯỢC 15 GIÂY THẬT
     async function triggerAd(rewardType) {
+      currentAdRewardType = rewardType || 'CASH';
+      if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
       try {
         const res = await fetch('/api/start-ad-1', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: tg.initData, rewardType: rewardType })
+          body: JSON.stringify({ initData: tg.initData, rewardType: currentAdRewardType })
         });
         const data = await res.json();
-        if (!data.success) return alert(data.error || "Lỗi khởi động quảng cáo!");
+        if (!data.success || !data.adUrl) {
+          return alert(data.error || "Không thể tải quảng cáo lúc này! Vui lòng thử lại.");
+        }
 
         currentSessionId = data.sessionId;
-        tg.openLink(data.adUrl);
 
-        setTimeout(async () => {
-          try {
-            const res2 = await fetch('/api/start-ad-2', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ initData: tg.initData, sessionId: currentSessionId })
-            });
-            const data2 = await res2.json();
-            if (data2.success) {
-              tg.openLink(data2.adUrl);
+        // Mở Modal nội bộ ngay trong tab game, tuyệt đối không mở trình duyệt ngoài
+        const modal = document.getElementById('ad-modal');
+        const iframe = document.getElementById('ad-iframe');
+        const title = document.getElementById('ad-status-title');
+        const badge = document.getElementById('ad-countdown-badge');
+        const btnNext = document.getElementById('btn-next-ad');
+        const btnClaim = document.getElementById('btn-claim-ad');
+        const progress = document.getElementById('ad-progress-fill');
 
-              setTimeout(async () => {
-                const claimRes = await fetch('/api/claim-reward-double', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ initData: tg.initData, sessionId: currentSessionId })
-                });
-                const claimData = await claimRes.json();
-                if (claimData.success) {
-                  alert(claimData.message);
-                  loadData();
-                } else {
-                  alert(claimData.message || "Chưa hoàn thành xem quảng cáo!");
-                }
-              }, 16000);
-            }
-          } catch (e) {}
-        }, 16000);
+        modal.style.display = 'flex';
+        title.innerText = "📺 QUẢNG CÁO (1/2)";
+        badge.style.display = 'inline-block';
+        btnNext.style.display = 'none';
+        btnClaim.style.display = 'none';
+        progress.style.width = '0%';
+
+        // Tải quảng cáo trực tiếp vào iframe trong game
+        iframe.src = data.adUrl;
+
+        // Bắt đầu đếm ngược 15 giây thật
+        let secondsLeft = 15;
+        badge.innerText = "⏳ Vui lòng chờ: 15s";
+
+        if (adCountdownInterval) clearInterval(adCountdownInterval);
+        adCountdownInterval = setInterval(() => {
+          secondsLeft--;
+          const percent = Math.floor(((15 - secondsLeft) / 15) * 100);
+          progress.style.width = percent + '%';
+
+          if (secondsLeft > 0) {
+            badge.innerText = '⏳ Vui lòng chờ: ' + secondsLeft + 's';
+          } else {
+            clearInterval(adCountdownInterval);
+            badge.style.display = 'none';
+            btnNext.style.display = 'inline-block';
+            title.innerText = "✅ ĐÃ XONG QC 1 (15s)";
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+          }
+        }, 1000);
 
       } catch (e) {
-        alert("Lỗi khi mở quảng cáo!");
+        alert("Lỗi kết nối máy chủ khi mở quảng cáo!");
+      }
+    }
+
+    // BƯỚC 2: CHUYỂN TIẾP SANG QUẢNG CÁO 2/2 VÀ TIẾP TỤC ĐẾM NGƯỢC 15 GIÂY THẬT
+    async function proceedToAd2() {
+      const title = document.getElementById('ad-status-title');
+      const badge = document.getElementById('ad-countdown-badge');
+      const btnNext = document.getElementById('btn-next-ad');
+      const btnClaim = document.getElementById('btn-claim-ad');
+      const iframe = document.getElementById('ad-iframe');
+      const progress = document.getElementById('ad-progress-fill');
+
+      btnNext.style.display = 'none';
+      badge.style.display = 'inline-block';
+      title.innerText = "📺 QUẢNG CÁO (2/2)";
+      progress.style.width = '0%';
+
+      try {
+        const res = await fetch('/api/start-ad-2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, sessionId: currentSessionId })
+        });
+        const data = await res.json();
+        if (!data.success || !data.adUrl) {
+          return alert(data.error || "Lỗi khi tải quảng cáo thứ 2!");
+        }
+
+        iframe.src = data.adUrl;
+
+        let secondsLeft = 15;
+        badge.innerText = "⏳ Vui lòng chờ: 15s";
+
+        if (adCountdownInterval) clearInterval(adCountdownInterval);
+        adCountdownInterval = setInterval(() => {
+          secondsLeft--;
+          const percent = Math.floor(((15 - secondsLeft) / 15) * 100);
+          progress.style.width = percent + '%';
+
+          if (secondsLeft > 0) {
+            badge.innerText = '⏳ Vui lòng chờ: ' + secondsLeft + 's';
+          } else {
+            clearInterval(adCountdownInterval);
+            badge.style.display = 'none';
+            btnClaim.style.display = 'inline-block';
+            title.innerText = "🎉 ĐÃ XONG 2/2 QUẢNG CÁO!";
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+          }
+        }, 1000);
+
+      } catch (e) {
+        alert("Lỗi kết nối khi tải quảng cáo 2!");
+      }
+    }
+
+    // BƯỚC 3: ĐÓNG MODAL VÀ NHẬN THƯỞNG XÁC THỰC TỪ SERVER
+    async function claimFinalReward() {
+      const modal = document.getElementById('ad-modal');
+      const iframe = document.getElementById('ad-iframe');
+
+      if (adCountdownInterval) clearInterval(adCountdownInterval);
+      modal.style.display = 'none';
+      iframe.src = 'about:blank';
+
+      if (!currentSessionId) return;
+
+      try {
+        const res = await fetch('/api/claim-reward-double', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, sessionId: currentSessionId })
+        });
+        const result = await res.json();
+        if (result.success) {
+          alert(result.message);
+          loadData(); // Cập nhật số dư và nhiên liệu tức thì!
+        } else {
+          alert(result.message || "Bạn chưa xem đủ 15 giây mỗi quảng cáo nên không thể nhận thưởng!");
+        }
+      } catch (e) {
+        alert("Lỗi khi gửi yêu cầu nhận thưởng!");
       }
     }
 
@@ -649,26 +893,24 @@
           }
           let html = '';
           data.withdrawals.forEach(o => {
-            html += `
-              <div class="admin-order-item">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                  <strong style="color: var(--accent);">#${o.id}</strong>
-                  <span class="admin-badge badge-pending">${o.status}</span>
-                </div>
-                <div style="font-size: 13px;">👤 Tài khoản: <strong>${o.username}</strong></div>
-                <div style="font-size: 14px; font-weight: bold; color: var(--fuel); margin: 4px 0;">
-                  💰 Số tiền: ${o.amount.toLocaleString('vi-VN')} VNĐ
-                </div>
-                <div style="font-size: 12px; color: #ccc;">
-                  💳 Kênh: <strong>${o.method === 'NGAN_HANG' ? o.bankName : o.method}</strong>
-                </div>
-                <div style="font-size: 13px; color: #fff; background: #000; padding: 6px; border-radius: 6px; margin: 6px 0;">
-                  STK / SĐT: <strong style="color: var(--accent);">${o.accountNumber}</strong><br>
-                  Tên: <strong>${o.accountName}</strong>
-                </div>
-                <div style="font-size: 11px; color: var(--subtext);">⏰ ${o.created_at}</div>
-              </div>
-            `;
+            html += '<div class="admin-order-item">' +
+              '<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">' +
+                '<strong style="color: var(--accent);">#' + o.id + '</strong>' +
+                '<span class="admin-badge badge-pending">' + o.status + '</span>' +
+              '</div>' +
+              '<div style="font-size: 13px;">👤 Tài khoản: <strong>' + o.username + '</strong></div>' +
+              '<div style="font-size: 14px; font-weight: bold; color: var(--fuel); margin: 4px 0;">' +
+                '💰 Số tiền: ' + o.amount.toLocaleString('vi-VN') + ' VNĐ' +
+              '</div>' +
+              '<div style="font-size: 12px; color: #ccc;">' +
+                '💳 Kênh: <strong>' + (o.method === 'NGAN_HANG' ? o.bankName : o.method) + '</strong>' +
+              '</div>' +
+              '<div style="font-size: 13px; color: #fff; background: #000; padding: 6px; border-radius: 6px; margin: 6px 0;">' +
+                'STK / SĐT: <strong style="color: var(--accent);">' + o.accountNumber + '</strong><br>' +
+                'Tên: <strong>' + o.accountName + '</strong>' +
+              '</div>' +
+              '<div style="font-size: 11px; color: var(--subtext);">⏰ ' + o.created_at + '</div>' +
+            '</div>';
           });
           container.innerHTML = html;
         }
