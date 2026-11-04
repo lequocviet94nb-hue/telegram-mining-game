@@ -66,7 +66,7 @@
     .progress-bar-bg { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 5px; }
     .progress-bar-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
 
-    #blocked-screen, #register-screen { display: none; }
+    #blocked-screen, #register-screen, #maintenance-screen { display: none; }
     .blocked-card { background: #201115; border: 1px solid var(--danger); text-align: center; padding: 30px 16px; border-radius: 14px; }
     .blocked-icon { font-size: 45px; margin-bottom: 10px; }
     .blocked-title { font-size: 18px; font-weight: bold; color: var(--danger); margin-bottom: 8px; }
@@ -112,6 +112,21 @@
   </style>
 </head>
 <body>
+
+  <!-- MÀN HÌNH BẢO TRÌ HỆ THỐNG -->
+  <div class="container" id="maintenance-screen" style="display: none;">
+    <div class="card" style="text-align: center; padding: 45px 20px; border-color: var(--fuel); box-shadow: 0 0 25px rgba(255,170,0,0.2);">
+      <div style="font-size: 55px; margin-bottom: 16px; animation: bounce 1.2s infinite alternate;">⚙️</div>
+      <h2 style="font-size: 20px; color: var(--fuel); margin-bottom: 12px; font-weight: 800; letter-spacing: 0.5px;">HỆ THỐNG ĐANG BẢO TRÌ</h2>
+      <p style="font-size: 13px; color: #ccc; line-height: 1.6; margin-bottom: 20px;">
+        Máy in tiền đang được tạm dừng để bảo trì định kỳ, nâng cấp máy chủ và tối ưu hóa hệ thống kiếm tiền.<br><br>
+        🔒 <strong style="color: #fff;">Toàn bộ số dư, tài khoản và thời gian của bạn được bảo toàn an toàn 100%.</strong>
+      </p>
+      <div style="background: rgba(255, 170, 0, 0.12); border: 1px dashed var(--fuel); border-radius: 10px; padding: 12px; font-size: 12px; color: #ffcc66; line-height: 1.5;">
+        ⏳ Vui lòng quay lại sau ít phút. Trang sẽ tự động kết nối lại khi bảo trì hoàn tất!
+      </div>
+    </div>
+  </div>
 
   <!-- MÀN HÌNH ĐIỀU PHỐI QUẢNG CÁO 2 BƯỚC NỘI BỘ -->
   <div id="ad-overlay-screen">
@@ -204,7 +219,7 @@
     <!-- TAB 2: GIỚI THIỆU BẠN BÈ -->
     <div class="container" id="tab-referral" style="display: none;">
       <div class="card">
-        <div class="card-title">Sự Kiện Giới Thiệu Bạn Bè</div>
+        <div class="card-title">Sự Kiện Giới Thiệu Bạn BÈ</div>
         <p style="font-size: 13px; color: #ccc; line-height: 1.5; margin-bottom: 12px;">
           Mời bạn bè cùng tham gia kiếm tiền. Khi 1 người bạn xem đủ <strong>5.000 quảng cáo</strong>, Admin sẽ nhận được thông báo và chuyển ngay <strong>10.000 VNĐ tiền mặt</strong> cho bạn!
         </p>
@@ -448,6 +463,15 @@
           })
         });
         const data = await res.json();
+
+        // NẾU HỆ THỐNG ĐANG BẢO TRÌ
+        if (data.maintenance) {
+          document.getElementById('maintenance-screen').style.display = 'block';
+          document.getElementById('blocked-screen').style.display = 'none';
+          document.getElementById('register-screen').style.display = 'none';
+          document.getElementById('main-content').style.display = 'none';
+          return;
+        }
 
         // NẾU PHÁT HIỆN DÙNG TÀI KHOẢN KHÁC TRÊN CÙNG MÁY PHẦN CỨNG NÀY
         if (data.device_blocked) {
@@ -817,15 +841,4 @@
       try {
         const res = await fetch('/api/version');
         const data = await res.json();
-        if (!currentAppVersion) {
-          currentAppVersion = data.version;
-        } else if (currentAppVersion !== data.version) {
-          window.location.reload();
-        }
-      } catch (e) {}
-    }, 20000);
-
-    window.onload = loadData;
-  </script>
-</body>
-</html>
+        if (!current
