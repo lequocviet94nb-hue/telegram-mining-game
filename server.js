@@ -7,7 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 app.use(express.json());
 
-// === 1. CHỐNG LƯU CACHE (Bắt Telegram luôn lấy bản mới nhất) ===
+// Chống lưu Cache
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.set('Pragma', 'no-cache');
@@ -17,7 +17,6 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// === MÃ PHIÊN BẢN TỰ ĐỘNG (Mỗi lần bạn commit, mã này tự đổi) ===
 const SERVER_BUILD_ID = Date.now().toString();
 
 // === CẤU HÌNH BIẾN MÔI TRƯỜNG ===
@@ -34,12 +33,12 @@ const DB_FILE = path.join(__dirname, 'database.json');
 
 function loadDB() {
   if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {}, sessions: {} }, null, 2));
+    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {}, sessions: {}, devices: {} }, null, 2));
   }
   try {
     return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
   } catch (e) {
-    return { users: {}, sessions: {} };
+    return { users: {}, sessions: {}, devices: {} };
   }
 }
 
@@ -47,7 +46,7 @@ function saveDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// 2. Tự động cài đặt Webhook và Menu Button cho Bot Telegram
+// 1. Tự động thiết lập Bot Telegram
 async function setupTelegramBot() {
   if (!BOT_TOKEN) return;
   try {
@@ -65,17 +64,15 @@ async function setupTelegramBot() {
     });
     console.log('[Telegram Bot] Kích hoạt Bot thành công!');
   } catch (err) {
-    console.error('[Telegram Bot Error]', err);
+    console.error(err);
   }
 }
 setupTelegramBot();
 
-// 3. API Kiểm tra phiên bản mới (Game sẽ liên tục hỏi server xem có bản mới chưa)
 app.get('/api/version', (req, res) => {
   res.json({ version: SERVER_BUILD_ID });
 });
 
-// 4. Webhook Telegram phản hồi tin nhắn /start
 app.post('/api/telegram-webhook', async (req, res) => {
   const { message } = req.body;
   if (message && message.text && message.text.startsWith('/start')) {
@@ -97,14 +94,12 @@ app.post('/api/telegram-webhook', async (req, res) => {
           }
         })
       });
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) {}
   }
   res.sendStatus(200);
 });
 
-// 5. Xác thực Telegram initData
+// 2. Xác thực Telegram
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -126,7 +121,7 @@ function verifyTelegram(initDataStr) {
   }
 }
 
-// 6. Tính toán tiền in tự động
+// 3. Tính toán tiền in tự động khi thoát game mở lại (Không mất 1 xu)
 function calculateBalance(user) {
   const now = Math.floor(Date.now() / 1000);
   const effectiveEnd = Math.min(now, user.fuel_expires_at);
@@ -139,11 +134,12 @@ function calculateBalance(user) {
   return user;
 }
 
-// 7. API: Đăng ký tài khoản
+// 4. API Đăng ký tài khoản (KHÓA CHẶT 1 THIẾT BỊ = 1 TÀI KHOẢN)
 app.post('/api/register', (req, res) => {
-  const { initData, username, pin } = req.body;
+  const { initData, username, pin, deviceId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
+  if (!deviceId) return res.status(400).json({ error: 'Không nhận diện được thiết bị!' });
   if (!username || username.trim().length < 3) return res.status(400).json({ error: 'Tên phải từ 3 ký tự!' });
   if (!pin || pin.trim().length < 4) return res.status(400).json({ error: 'Mã PIN từ 4 số trở lên!' });
 
@@ -152,7 +148,13 @@ app.post('/api/register', (req, res) => {
   const tgId = String(tgUser.id);
 
   const db = loadDB();
-  if (db.users[tgId]) return res.status(400).json({ error: 'Đã đăng ký rồi!' });
+
+  // Kiểm tra 1 thiết bị chỉ được tạo 1 tài khoản
+  if (db.devices && db.devices[deviceId] && db.devices[deviceId] !== tgId) {
+    return res.status(400).json({ error: '⛔ Thiết bị này đã đăng ký 1 tài khoản khác rồi! Mỗi thiết bị chỉ được phép chơi 1 tài khoản duy nhất.' });
+  }
+
+  if (db.users[tgId]) return res.status(400).json({ error: 'Tài khoản Telegram này đã đăng ký rồi!' });
 
   const isNameTaken = Object.values(db.users).some(u => u.username.toLowerCase() === username.trim().toLowerCase());
   if (isNameTaken) return res.status(400).json({ error: 'Tên tài khoản này đã có người dùng!' });
@@ -162,6 +164,7 @@ app.post('/api/register', (req, res) => {
     telegram_id: tgId,
     username: username.trim(),
     pin: pin.trim(),
+    device_id: deviceId,
     balance: 0,
     fuel_expires_at: now,
     last_collected_at: now,
@@ -169,13 +172,51 @@ app.post('/api/register', (req, res) => {
     created_at: now
   };
 
+  if (!db.devices) db.devices = {};
+  db.devices[deviceId] = tgId;
+
   saveDB(db);
   return res.json({ success: true });
 });
 
-// 8. API: Lấy thông tin tài khoản
+// 5. API Khôi phục tài khoản từ đám mây Telegram (Chống mất dữ liệu khi Render restart)
+app.post('/api/restore-account', (req, res) => {
+  const { initData, backup } = req.body;
+  if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
+
+  const params = new URLSearchParams(initData);
+  const tgUser = JSON.parse(params.get('user'));
+  const tgId = String(tgUser.id);
+
+  if (!backup || !backup.username) return res.json({ success: false });
+
+  const db = loadDB();
+  if (!db.users[tgId]) {
+    // Khôi phục lại tài khoản từ đám mây của người dùng
+    db.users[tgId] = {
+      telegram_id: tgId,
+      username: backup.username,
+      pin: backup.pin || '1234',
+      device_id: backup.deviceId || 'restored',
+      balance: backup.balance || 0,
+      fuel_expires_at: backup.fuel_expires_at || Math.floor(Date.now() / 1000),
+      last_collected_at: backup.last_collected_at || Math.floor(Date.now() / 1000),
+      rate_per_sec: RATE_PER_SEC_VND,
+      created_at: backup.created_at || Math.floor(Date.now() / 1000)
+    };
+    if (backup.deviceId) {
+      if (!db.devices) db.devices = {};
+      db.devices[backup.deviceId] = tgId;
+    }
+    saveDB(db);
+    console.log(`[RESTORE] Đã khôi phục tài khoản an toàn cho user: ${tgId}`);
+  }
+  return res.json({ success: true });
+});
+
+// 6. API Lấy thông tin tài khoản
 app.post('/api/user-status', (req, res) => {
-  const { initData } = req.body;
+  const { initData, deviceId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
   const params = new URLSearchParams(initData);
@@ -183,8 +224,17 @@ app.post('/api/user-status', (req, res) => {
   const tgId = String(tgUser.id);
 
   const db = loadDB();
-  const user = db.users[tgId];
 
+  // Kiểm tra khóa thiết bị: Nếu thiết bị này thuộc về tài khoản khác
+  if (deviceId && db.devices && db.devices[deviceId] && db.devices[deviceId] !== tgId) {
+    return res.json({
+      success: false,
+      device_blocked: true,
+      error: '⛔ THIẾT BỊ NÀY ĐÃ ĐĂNG NHẬP TÀI KHOẢN KHÁC! Mỗi máy chỉ được chơi 1 tài khoản.'
+    });
+  }
+
+  const user = db.users[tgId];
   if (!user) return res.json({ success: true, is_registered: false });
 
   user.rate_per_sec = RATE_PER_SEC_VND;
@@ -194,14 +244,19 @@ app.post('/api/user-status', (req, res) => {
   return res.json({
     success: true,
     is_registered: true,
-    username: user.username,
-    balance: user.balance,
-    fuel_expires_at: user.fuel_expires_at,
-    rate_per_sec: user.rate_per_sec
+    user: {
+      username: user.username,
+      pin: user.pin,
+      balance: user.balance,
+      fuel_expires_at: user.fuel_expires_at,
+      last_collected_at: user.last_collected_at,
+      rate_per_sec: user.rate_per_sec,
+      deviceId: user.device_id
+    }
   });
 });
 
-// 9. API: Bắt đầu Quảng Cáo 1/2
+// 7. API Quảng Cáo 1/2
 app.post('/api/start-ad-1', (req, res) => {
   const { initData, rewardType } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -230,7 +285,7 @@ app.post('/api/start-ad-1', (req, res) => {
   return res.json({ success: true, sessionId, adUrl });
 });
 
-// 10. API: Chuyển sang Quảng Cáo 2/2
+// 8. API Quảng Cáo 2/2
 app.post('/api/start-ad-2', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -255,7 +310,7 @@ app.post('/api/start-ad-2', (req, res) => {
   return res.json({ success: true, adUrl });
 });
 
-// 11. API: Nhận thưởng
+// 9. API Nhận Thưởng
 app.post('/api/claim-reward-double', (req, res) => {
   const { initData, sessionId } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -302,7 +357,6 @@ app.post('/api/claim-reward-double', (req, res) => {
   return res.json({ success: true, message: returnMsg, rewardType: sess.reward_type });
 });
 
-// 12. Postback Monetag
 app.get('/api/postback', (req, res) => res.send('OK'));
 
 const PORT = process.env.PORT || 3000;
