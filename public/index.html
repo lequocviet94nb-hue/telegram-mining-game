@@ -125,6 +125,11 @@
       <div style="background: rgba(255, 170, 0, 0.12); border: 1px dashed var(--fuel); border-radius: 10px; padding: 12px; font-size: 12px; color: #ffcc66; line-height: 1.5;">
         ⏳ Vui lòng quay lại sau ít phút. Trang sẽ tự động kết nối lại khi bảo trì hoàn tất!
       </div>
+      <div style="margin-top: 25px;">
+        <button onclick="promptAdminLogin()" style="background: none; border: none; color: #555; font-size: 11px; cursor: pointer; text-decoration: underline;">
+          🔐 Dành riêng cho Chủ Game (Đăng nhập Quản Trị)
+        </button>
+      </div>
     </div>
   </div>
 
@@ -299,6 +304,23 @@
 
     <!-- TAB 4: ADMIN QUẢN TRỊ (CHỈ ADMIN THẤY) -->
     <div class="container" id="tab-admin" style="display: none;">
+      <!-- KHỐI BẬT/TẮT BẢO TRÌ HỆ THỐNG -->
+      <div class="card" style="border: 2px solid var(--accent); background: #1a1e28;">
+        <div class="card-title" style="color: var(--accent); font-weight: bold;">⚙️ CÔNG TẮC BẢO TRÌ TOÀN HỆ THỐNG</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0;">
+          <div>
+            <div style="font-size: 12px; color: var(--subtext);">Trạng thái hiện tại:</div>
+            <div id="maint-status-display" style="font-size: 16px; font-weight: bold; color: var(--fuel);">Đang kiểm tra...</div>
+          </div>
+          <button id="btn-toggle-maint" class="btn" style="width: auto; padding: 10px 18px; margin: 0; font-size: 13px;" onclick="handleToggleMaintFromApp()">
+            🔄 Đang tải...
+          </button>
+        </div>
+        <p style="font-size: 11px; color: #888; line-height: 1.4;">
+          💡 <strong>Quyền riêng tư:</strong> Khối này chỉ hiển thị duy nhất trên máy của Admin. Khi bạn bấm Bật/Tắt, toàn bộ người chơi sẽ tự động nhận lệnh trong 15 giây mà không cần bạn sửa code!
+        </p>
+      </div>
+
       <div class="card">
         <div class="card-title">👑 Bảng Điều Khiển Admin (Chi Tiết Đơn Đổi Thưởng)</div>
         <div id="admin-orders-container">
@@ -374,6 +396,7 @@
     let currentAppVersion = null;
     let userTelegramId = null;
     let isAdminUser = false;
+    let isCurrentMaintenanceOn = false;
 
     function formatVND(amount) {
       return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
@@ -499,6 +522,7 @@
             });
           } else {
             // ĐÃ ĐĂNG NHẬP THÀNH CÔNG -> VÀO THẲNG GAME
+            document.getElementById('maintenance-screen').style.display = 'none';
             document.getElementById('register-screen').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
             document.getElementById('user-display').innerText = '👤 Tài khoản: ' + data.user.username;
@@ -510,6 +534,9 @@
 
             if (isAdminUser) {
               document.getElementById('tab-btn-4').style.display = 'flex';
+              if (typeof data.is_maintenance === 'boolean') {
+                updateMaintUI(data.is_maintenance);
+              }
             }
 
             const refLink = 'https://t.me/mayintien2026_bot/play?startapp=ref_' + userTelegramId;
@@ -793,6 +820,68 @@
       alert("Đã sao chép link mời bạn bè!");
     }
 
+    // ADMIN BẬT / TẮT BẢO TRÌ NGAY TRÊN APP
+    async function handleToggleMaintFromApp() {
+      if (!confirm(isCurrentMaintenanceOn ? "Bạn có chắc muốn MỞ CỬA game lại cho người chơi?" : "Bạn có chắc muốn BẬT BẢO TRÌ game?")) return;
+
+      try {
+        const res = await fetch('/api/admin/toggle-maintenance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          updateMaintUI(data.is_maintenance);
+        } else {
+          alert(data.error || "Không thể thực hiện!");
+        }
+      } catch (e) {
+        alert("Lỗi kết nối khi thay đổi trạng thái bảo trì!");
+      }
+    }
+
+    function updateMaintUI(isMaint) {
+      isCurrentMaintenanceOn = isMaint;
+      const display = document.getElementById('maint-status-display');
+      const btn = document.getElementById('btn-toggle-maint');
+      if (!display || !btn) return;
+
+      if (isMaint) {
+        display.innerHTML = '<span style="color: var(--danger);">🔴 ĐANG BẢO TRÌ (Đã khóa cửa)</span>';
+        btn.innerText = '🟢 MỞ CỬA GAME LẠI';
+        btn.className = 'btn btn-green';
+      } else {
+        display.innerHTML = '<span style="color: var(--accent);">🟢 ĐANG MỞ CỬA HOẠT ĐỘNG</span>';
+        btn.innerText = '🔴 BẬT BẢO TRÌ NGAY';
+        btn.className = 'btn btn-danger';
+      }
+    }
+
+    // ĐĂNG NHẬP ADMIN TRỰC TIẾP TỪ MÀN HÌNH BẢO TRÌ NẾU CHƯA XÁC NHẬN TRÊN BOT
+    async function promptAdminLogin() {
+      const secret = prompt("Nhập mã bảo mật Quản trị viên (Mặc định: mysecret123 hoặc 1234):");
+      if (!secret) return;
+
+      try {
+        const res = await fetch('/api/admin/claim-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, secret: secret.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("🎉 " + data.message + "\nGame sẽ mở ra ngay bây giờ!");
+          loadData();
+        } else {
+          alert(data.error || "Mã bảo mật không đúng!");
+        }
+      } catch (e) {
+        alert("Lỗi kết nối máy chủ!");
+      }
+    }
+
     // ADMIN XEM ĐƠN RÚT
     async function loadAdminOrders() {
       const container = document.getElementById('admin-orders-container');
@@ -803,42 +892,70 @@
           body: JSON.stringify({ initData: tg.initData })
         });
         const data = await res.json();
-        if (data.success && data.withdrawals) {
-          if (data.withdrawals.length === 0) {
-            container.innerHTML = '<p style="font-size: 12px; color: var(--subtext); text-align: center;">Chưa có đơn đổi thưởng nào.</p>';
-            return;
+        if (data.success) {
+          if (typeof data.is_maintenance === 'boolean') {
+            updateMaintUI(data.is_maintenance);
           }
-          let html = '';
-          data.withdrawals.forEach(o => {
-            html += '<div class="admin-order-item">' +
-              '<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">' +
-                '<strong style="color: var(--accent);">#' + o.id + '</strong>' +
-                '<span class="admin-badge badge-pending">' + o.status + '</span>' +
-              '</div>' +
-              '<div style="font-size: 13px;">👤 Tài khoản: <strong>' + o.username + '</strong></div>' +
-              '<div style="font-size: 14px; font-weight: bold; color: var(--fuel); margin: 4px 0;">' +
-                '💰 Số tiền: ' + o.amount.toLocaleString('vi-VN') + ' VNĐ' +
-              '</div>' +
-              '<div style="font-size: 12px; color: #ccc;">' +
-                '💳 Kênh: <strong>' + (o.method === 'NGAN_HANG' ? o.bankName : o.method) + '</strong>' +
-              '</div>' +
-              '<div style="font-size: 13px; color: #fff; background: #000; padding: 6px; border-radius: 6px; margin: 6px 0;">' +
-                'STK / SĐT: <strong style="color: var(--accent);">' + o.accountNumber + '</strong><br>' +
-                'Tên: <strong>' + o.accountName + '</strong>' +
-              '</div>' +
-              '<div style="font-size: 11px; color: var(--subtext);">⏰ ' + o.created_at + '</div>' +
-            '</div>';
-          });
-          container.innerHTML = html;
+          if (data.withdrawals) {
+            if (data.withdrawals.length === 0) {
+              container.innerHTML = '<p style="font-size: 12px; color: var(--subtext); text-align: center;">Chưa có đơn đổi thưởng nào.</p>';
+              return;
+            }
+            let html = '';
+            data.withdrawals.forEach(o => {
+              html += '<div class="admin-order-item">' +
+                '<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">' +
+                  '<strong style="color: var(--accent);">#' + o.id + '</strong>' +
+                  '<span class="admin-badge badge-pending">' + o.status + '</span>' +
+                '</div>' +
+                '<div style="font-size: 13px;">👤 Tài khoản: <strong>' + o.username + '</strong></div>' +
+                '<div style="font-size: 14px; font-weight: bold; color: var(--fuel); margin: 4px 0;">' +
+                  '💰 Số tiền: ' + o.amount.toLocaleString('vi-VN') + ' VNĐ' +
+                '</div>' +
+                '<div style="font-size: 12px; color: #ccc;">' +
+                  '💳 Kênh: <strong>' + (o.method === 'NGAN_HANG' ? o.bankName : o.method) + '</strong>' +
+                '</div>' +
+                '<div style="font-size: 13px; color: #fff; background: #000; padding: 6px; border-radius: 6px; margin: 6px 0;">' +
+                  'STK / SĐT: <strong style="color: var(--accent);">' + o.accountNumber + '</strong><br>' +
+                  'Tên: <strong>' + o.accountName + '</strong>' +
+                '</div>' +
+                '<div style="font-size: 11px; color: var(--subtext);">⏰ ' + o.created_at + '</div>' +
+              '</div>';
+            });
+            container.innerHTML = html;
+          }
         }
       } catch (e) {
         container.innerHTML = '<p style="color: var(--danger); font-size: 12px;">Lỗi tải danh sách đơn!</p>';
       }
     }
 
-    // TỰ ĐỘNG CẬP NHẬT PHIÊN BẢN MỚI
-    setInterval(async () => {
+    // TỰ ĐỘNG CẬP NHẬT PHIÊN BẢN MỚI CHO TẤT CẢ NGƯỜI CHƠI (TỰ RELOAD KHI BẬT/TẮT BẢO TRÌ HOẶC UP CODE)
+    async function checkForUpdates() {
       try {
-        const res = await fetch('/api/version');
+        const res = await fetch('/api/version?t=' + Date.now(), { cache: 'no-store' });
         const data = await res.json();
-        if (!current
+        if (!currentAppVersion) {
+          currentAppVersion = data.version;
+        } else if (currentAppVersion !== data.version) {
+          console.log('[AUTO-UPDATE] Phát hiện phiên bản mới: ' + data.version + ' -> Tự động nạp bản mới!');
+          // Dùng replace có timestamp để ép trình duyệt Mini App xóa sạch cache cũ
+          window.location.replace(window.location.pathname + '?_update=' + Date.now());
+        }
+      } catch (e) {}
+    }
+
+    // Quét định kỳ mỗi 15 giây
+    setInterval(checkForUpdates, 15000);
+
+    // Quét ngay khi người chơi mở lại app từ chạy ngầm
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkForUpdates();
+      }
+    });
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
