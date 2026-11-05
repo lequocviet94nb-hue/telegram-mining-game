@@ -835,6 +835,10 @@ TYPE html>
           }
 
           if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+          if (document.getElementById('player-ads-count')) {
+            const curAds = parseInt(document.getElementById('player-ads-count').innerText) || 0;
+            document.getElementById('player-ads-count').innerText = curAds + 1;
+          }
 
           showAdOverlay(
             "✅",
@@ -1002,12 +1006,51 @@ TYPE html>
 
     async function loadAdminData() {
       try {
-        const res = await fetch('/api/admin/orders?initData=' + encodeURIComponent(tg.initData));
+        const res = await fetch('/api/admin/withdrawals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        });
         const data = await res.json();
         if (data.success) {
-          renderAdminOrders(data.withdrawals);
+          renderAdminOrders(data.withdrawals || []);
+          
+          if (document.getElementById('admin-total-users')) {
+            document.getElementById('admin-total-users').innerText = (data.total_users || 0).toLocaleString('vi-VN');
+          }
+          if (document.getElementById('admin-total-ads')) {
+            document.getElementById('admin-total-ads').innerText = (data.total_ads_watched || 0).toLocaleString('vi-VN');
+          }
+          
+          const usersContainer = document.getElementById('admin-users-list');
+          if (usersContainer && data.users_list) {
+            if (data.users_list.length === 0) {
+              usersContainer.innerHTML = '<p style="font-size: 12px; color: var(--subtext); text-align: center;">Chưa có người chơi nào.</p>';
+            } else {
+              let htmlUsers = '';
+              data.users_list.forEach((u, idx) => {
+                const ads = u.ads_watched || 0;
+                const isSuspicious = (u.balance > 5000 && ads < 5);
+                htmlUsers += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px;">' +
+                  '<div>' +
+                    '<span style="color: #666; margin-right: 6px;">#' + (idx + 1) + '</span>' +
+                    '<strong style="color: #fff;">' + u.username + '</strong>' +
+                    (isSuspicious ? ' <span style="color: var(--danger); font-size: 10px;">⚠️ Ảo?</span>' : '') +
+                    '<div style="font-size: 11px; color: var(--subtext);">Số dư: ' + (u.balance || 0).toLocaleString('vi-VN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' VNĐ</div>' +
+                  '</div>' +
+                  '<div style="text-align: right;">' +
+                    '<div style="font-weight: bold; color: var(--primary); font-size: 13px;">' + ads + ' QC</div>' +
+                    '<div style="font-size: 10px; color: #666;">' + (ads >= 20 ? '🔥 Tích cực' : (ads >= 5 ? 'Bình thường' : 'Mới')) + '</div>' +
+                  '</div>' +
+                '</div>';
+              });
+              usersContainer.innerHTML = htmlUsers;
+            }
+          }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('Lỗi loadAdminData:', e);
+      }
     }
 
     function renderAdminOrders(orders) {
