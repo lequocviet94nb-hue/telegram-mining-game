@@ -576,6 +576,15 @@ app.post('/api/start-ad-2', (req, res) => {
   const sess = db.sessions[sessionId];
   if (!sess) return res.status(404).json({ error: 'Phiên không tồn tại!' });
 
+  // KIỂM TRA BẮT BUỘC: Phải xem Quảng cáo 1 tối thiểu 14 giây
+  const elapsed1 = Date.now() - (sess.ad1_start || 0);
+  if (elapsed1 < 14000) {
+    return res.status(400).json({ 
+      success: false, 
+      error: '⛔ Bạn đã bỏ qua hoặc tắt Quảng cáo (1/2) quá sớm! Bắt buộc phải xem hết video đến khi có dấu X và bấm đóng.' 
+    });
+  }
+
   sess.step = 2;
   sess.ad2_start = Date.now();
   sess.status = 'WATCHING_2';
@@ -599,6 +608,15 @@ app.post('/api/claim-reward-double', (req, res) => {
   if (!sess || sess.telegram_id !== tgId) return res.status(404).json({ success: false, message: 'Phiên không hợp lệ!' });
   if (sess.status === 'COMPLETED') return res.status(400).json({ success: false, message: 'Đã nhận thưởng rồi!' });
   if (sess.step !== 2) return res.status(400).json({ success: false, message: 'Chưa xem xong quảng cáo thứ 2!' });
+
+  // KIỂM TRA BẮT BUỘC: Phải xem Quảng cáo 2 tối thiểu 14 giây
+  const elapsed2 = Date.now() - (sess.ad2_start || 0);
+  if (elapsed2 < 14000) {
+    return res.status(400).json({ 
+      success: false, 
+      message: '⛔ Bạn đã bỏ qua hoặc tắt Quảng cáo (2/2) quá sớm! Bắt buộc phải xem hết video và bấm dấu X mới nhận được thưởng.' 
+    });
+  }
 
   sess.status = 'COMPLETED';
   const user = db.users[tgId];
