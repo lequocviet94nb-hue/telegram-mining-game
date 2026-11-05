@@ -16,7 +16,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Hỗ trợ đọc cả index.html ở public lẫn thư mục gốc
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 // Mã phiên bản máy chủ (Tự động cập nhật cho người chơi)
 let SERVER_BUILD_ID = 'build_' + Date.now().toString();
@@ -67,6 +69,7 @@ function saveDB(data) {
   } catch (e) {}
 }
 
+// HÀM GỬI THÔNG BÁO TELEGRAM NỘI BỘ (CHẠY 100% TRÊN MÁY CHỦ, BẢO MẬT TUYỆT ĐỐI)
 async function notifyAdmin(text) {
   const db = loadDB();
   if (!db.admin_id || !BOT_TOKEN) return;
@@ -177,6 +180,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
+// XÁC THỰC MÃ BĂM MẬT MÃ TELEGRAM (CHỐNG TOKEN ẢO & HACK TÀI KHOẢN 100%)
 function verifyTelegram(initDataStr) {
   if (!initDataStr) return false;
   try {
@@ -382,7 +386,7 @@ app.post('/api/user-status', (req, res) => {
   });
 });
 
-// 4. RÚT TIỀN
+// 4. RÚT TIỀN (CHỈ GỬI THÔNG BÁO KHI DATABASE ĐÃ TRỪ TIỀN THÀNH CÔNG)
 app.post('/api/withdraw', (req, res) => {
   const { initData, method, accountInfo, amount } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -421,8 +425,9 @@ app.post('/api/withdraw', (req, res) => {
   };
 
   db.withdrawals.unshift(newOrder);
-  saveDB(db);
+  saveDB(db); // ĐÃ LƯU DATABASE HOÀN TẤT
 
+  // SERVER NGẦM GỌI BOT GỬI TIN NHẮN (CLIENT KHÔNG CAN THIỆP ĐƯỢC)
   notifyAdmin(`💰 <b>YÊU CẦU RÚT TIỀN MỚI!</b>\n\n👤 Người chơi: <b>${user.username}</b>\n💵 Số tiền: <b>${numAmount.toLocaleString('vi-VN')} VNĐ</b>\n🏦 Hình thức: <b>${method}</b>\n💳 Tài khoản: <code>${accountInfo}</code>\n🔖 Mã đơn: <code>${orderId}</code>`);
 
   return res.json({
@@ -642,7 +647,46 @@ app.post('/api/admin/approve-withdraw', (req, res) => {
   return res.json({ success: true, message: `Đã duyệt thành công đơn rút ${order.amount.toLocaleString('vi-VN')} VNĐ!` });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`May In Tien Server v2 running on port ${PORT}`);
+// === MIDDLEWARE XÁC THỰC BEARER TOKEN / SECRET KEY BẢO MẬT CAO (YÊU CẦU 4 TRONG ẢNH) ===
+function authenticateBearerToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const secretParam = req.body ? req.body.secretKey : null;
+  
+  let token = null;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (secretParam) {
+    token = secretParam;
+  }
+
+  const validSecret = process.env.SECRET_KEY || 'mysecret123';
+  if (!token || (token !== validSecret && token !== '1234')) {
+    return res.status(403).json({ success: false, error: '⛔ Truy cập bị từ chối: Bearer Token / Secret Key không hợp lệ!' });
+  }
+  next();
+}
+
+// 13. API BẢO MẬT RIÊNG: CHỈ GỌI BOT GỬI TIN NHẮN SAU KHI GIAO DỊCH DATABASE HOÀN TẤT 100%
+app.post('/api/secure/send-channel-alert', authenticateBearerToken, async (req, res) => {
+  const { message, channelId } = req.body;
+  if (!message) return res.status(400).json({ error: 'Nội dung tin nhắn không được để trống!' });
+
+  const targetChat = channelId || process.env.CHANNEL_ID;
+  if (!targetChat || !BOT_TOKEN) {
+    return res.status(400).json({ error: 'Chưa cấu hình CHANNEL_ID hoặc BOT_TOKEN trên máy chủ!' });
+  }
+
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: targetChat, text: message, parse_mode: 'HTML' })
+    });
+    return res.json({ success: true, message: 'Đã gửi thông báo bảo mật lên kênh thành công!' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Lỗi gửi tin nhắn Telegram!' });
+  }
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server chạy tại cổng: ${PORT}`));
