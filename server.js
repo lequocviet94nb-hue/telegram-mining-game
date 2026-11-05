@@ -381,12 +381,13 @@ app.post('/api/user-status', (req, res) => {
       fuel_expires_at: user.fuel_expires_at,
       rate_per_sec: user.rate_per_sec,
       friends: friends,
-      invited_by: user.invited_by
+      invited_by: user.invited_by,
+      ads_watched: user.ads_watched || 0
     }
   });
 });
 
-// 4. RÚT TIỀN (CHỈ GỬI THÔNG BÁO KHI DATABASE ĐÃ TRỪ TIỀN THÀNH CÔNG)
+// 4. RÚT TIỀN (LƯU LƯỢT XEM QC ĐỂ ADMIN ĐỐI SOÁT CHỐNG GIAN LẬN)
 app.post('/api/withdraw', (req, res) => {
   const { initData, method, accountInfo, amount } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -420,15 +421,19 @@ app.post('/api/withdraw', (req, res) => {
     method: method,
     account_info: accountInfo,
     amount: numAmount,
+    ads_watched: user.ads_watched || 0, // LƯU SỐ QC ĐÃ XEM VÀO ĐƠN
     status: 'PENDING',
     created_at: Math.floor(Date.now() / 1000)
   };
 
   db.withdrawals.unshift(newOrder);
-  saveDB(db); // ĐÃ LƯU DATABASE HOÀN TẤT
+  saveDB(db);
 
-  // SERVER NGẦM GỌI BOT GỬI TIN NHẮN (CLIENT KHÔNG CAN THIỆP ĐƯỢC)
-  notifyAdmin(`💰 <b>YÊU CẦU RÚT TIỀN MỚI!</b>\n\n👤 Người chơi: <b>${user.username}</b>\n💵 Số tiền: <b>${numAmount.toLocaleString('vi-VN')} VNĐ</b>\n🏦 Hình thức: <b>${method}</b>\n💳 Tài khoản: <code>${accountInfo}</code>\n🔖 Mã đơn: <code>${orderId}</code>`);
+  const isSafeUser = (user.ads_watched || 0) >= 10;
+  const safeBadge = isSafeUser ? '✅ Hợp lệ' : '⚠️ Xem quá ít QC (Cần kiểm tra trước khi chuyển!)';
+
+  // SERVER NGẦM GỌI BOT THÔNG BÁO CHO ADMIN KÈM LƯỢT XEM QC
+  notifyAdmin(`💰 <b>YÊU CẦU RÚT TIỀN MỚI!</b>\n\n👤 Người chơi: <b>${user.username}</b>\n📺 <b>Quảng cáo đã xem:</b> <b>${user.ads_watched || 0} lượt</b> (${safeBadge})\n💵 Số tiền: <b>${numAmount.toLocaleString('vi-VN')} VNĐ</b>\n🏦 Hình thức: <b>${method}</b>\n💳 Tài khoản: <code>${accountInfo}</code>\n🔖 Mã đơn: <code>${orderId}</code>`);
 
   return res.json({
     success: true,
@@ -606,9 +611,9 @@ app.post('/api/admin/toggle-maintenance', (req, res) => {
   });
 });
 
-// 11. DANH SÁCH RÚT TIỀN CHO ADMIN
-app.get('/api/admin/orders', (req, res) => {
-  const { initData } = req.query;
+// 11. DANH SÁCH ĐƠN RÚT & TOÀN BỘ NGƯỜI CHƠI (CHỐNG GIAN LẬN ĐA TẦNG CHO ADMIN)
+app.post('/api/admin/withdrawals', (req, res) => {
+  const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
 
   const params = new URLSearchParams(initData);
@@ -620,7 +625,29 @@ app.get('/api/admin/orders', (req, res) => {
     return res.status(403).json({ error: 'Không có quyền Quản trị viên!' });
   }
 
-  return res.json({ success: true, withdrawals: db.withdrawals || [] });
+  const enrichedWithdrawals = (db.withdrawals || []).slice(0, 30).map(w => {
+    const u = db.users[w.telegram_id];
+    return {
+      ...w,
+      ads_watched: (u && typeof u.ads_watched === 'number') ? u.ads_watched : (w.ads_watched || 0)
+    };
+  });
+
+  const allUsersList = Object.values(db.users).map(u => ({
+    username: u.username,
+    ads_watched: u.ads_watched || 0,
+    balance: u.balance || 0,
+    device_id: u.device_id || u.hardware_fingerprint || 'Chưa rõ'
+  })).sort((a, b) => b.ads_watched - a.ads_watched);
+
+  return res.json({
+    success: true,
+    is_maintenance: db.is_maintenance !== false,
+    withdrawals: enrichedWithdrawals,
+    users_list: allUsersList,
+    total_users: Object.keys(db.users).length,
+    total_ads_watched: Object.values(db.users).reduce((sum, u) => sum + (u.ads_watched || 0), 0)
+  });
 });
 
 // 12. DUYỆT RÚT TIỀN
@@ -647,7 +674,7 @@ app.post('/api/admin/approve-withdraw', (req, res) => {
   return res.json({ success: true, message: `Đã duyệt thành công đơn rút ${order.amount.toLocaleString('vi-VN')} VNĐ!` });
 });
 
-// === MIDDLEWARE XÁC THỰC BEARER TOKEN / SECRET KEY BẢO MẬT CAO (YÊU CẦU 4 TRONG ẢNH) ===
+// === MIDDLEWARE XÁC THỰC BEARER TOKEN / SECRET KEY BẢO MẬT CAO ===
 function authenticateBearerToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const secretParam = req.body ? req.body.secretKey : null;
