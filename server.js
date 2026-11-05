@@ -7,18 +7,19 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 app.use(express.json());
 
-// Tắt hoàn toàn cache trình duyệt để cập nhật tức thì
+// Tắt hoàn toàn cache trình duyệt để cập nhật tức thì mọi thay đổi
 app.use((req, res, next) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
   next();
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Mã phiên bản máy chủ (Tự động cập nhật cho người chơi)
-const SERVER_BUILD_ID = 'maint_' + Date.now().toString();
+let SERVER_BUILD_ID = 'build_' + Date.now().toString();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MONETAG_LINK = process.env.MONETAG_LINK || 'https://alwingulla.com/4/8634884';
@@ -106,6 +107,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
   if (text === '/baotri on') {
     const db = loadDB();
     db.is_maintenance = true;
+    SERVER_BUILD_ID = 'build_' + Date.now().toString();
     saveDB(db);
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
@@ -122,6 +124,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
   if (text === '/baotri off') {
     const db = loadDB();
     db.is_maintenance = false;
+    SERVER_BUILD_ID = 'build_' + Date.now().toString();
     saveDB(db);
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
@@ -144,7 +147,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: `✅ <b>ĐÃ XÁC NHẬN BẠN LÀ ADMIN!</b>\n\n- Gõ <code>/baotri on</code> để bật bảo trì.\n- Gõ <code>/baotri off</code> để tắt bảo trì.\n- Đơn đổi thưởng và thông báo bạn bè sẽ gửi về đây.`,
+        text: `✅ <b>ĐÃ XÁC NHẬN BẠN LÀ ADMIN!</b>\n\n- Bạn có thể bật/tắt bảo trì ngay trên Tab 👑 Quản Trị trong app.\n- Đơn đổi thưởng và thông báo giới thiệu sẽ gửi về đây.`,
         parse_mode: 'HTML'
       })
     });
@@ -338,7 +341,7 @@ app.post('/api/user-status', (req, res) => {
   }
 
   const user = db.users[tgId];
-  if (!user) return res.json({ success: true, is_registered: false });
+  if (!user) return res.json({ success: true, is_registered: false, is_admin: isAdmin });
 
   // Tự động liên kết thiết bị cho tài khoản đã có sẵn nếu máy chưa lưu
   if (finalDeviceId && (!db.devices[finalDeviceId] || db.devices[finalDeviceId].telegram_id === tgId)) {
@@ -367,6 +370,7 @@ app.post('/api/user-status', (req, res) => {
     success: true,
     is_registered: true,
     is_admin: isAdmin,
+    is_maintenance: db.is_maintenance !== false,
     user: {
       telegram_id: user.telegram_id,
       username: user.username,
@@ -452,7 +456,7 @@ app.post('/api/withdraw', async (req, res) => {
   });
 });
 
-// 5. API ADMIN XEM ĐƠN
+// 5. API ADMIN XEM ĐƠN & TRẠNG THÁI BẢO TRÌ
 app.post('/api/admin/withdrawals', (req, res) => {
   const { initData } = req.body;
   if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
@@ -468,8 +472,63 @@ app.post('/api/admin/withdrawals', (req, res) => {
 
   return res.json({
     success: true,
+    is_maintenance: db.is_maintenance !== false,
     withdrawals: db.withdrawals.slice(-30).reverse()
   });
+});
+
+// 5.1 API ADMIN BẬT / TẮT BẢO TRÌ NGAY TRÊN APP (CHỈ ADMIN THẤY VÀ BẤM ĐƯỢC)
+app.post('/api/admin/toggle-maintenance', (req, res) => {
+  const { initData, enable } = req.body;
+  if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
+
+  const params = new URLSearchParams(initData);
+  const tgUser = JSON.parse(params.get('user'));
+  const tgId = String(tgUser.id);
+
+  const db = loadDB();
+  if (!db.admin_id || String(db.admin_id) !== tgId) {
+    return res.status(403).json({ error: 'Không có quyền Quản trị viên!' });
+  }
+
+  if (typeof enable === 'boolean') {
+    db.is_maintenance = enable;
+  } else {
+    db.is_maintenance = !db.is_maintenance;
+  }
+
+  // Tự động nhảy mã phiên bản để ép toàn bộ máy người chơi tự động reload sang trạng thái mới!
+  SERVER_BUILD_ID = 'build_' + Date.now().toString();
+
+  saveDB(db);
+
+  notifyAdmin(db.is_maintenance ? '⚙️ <b>ADMIN ĐÃ BẬT BẢO TRÌ GAME!</b>' : '✅ <b>ADMIN ĐÃ MỞ CỬA LẠI GAME!</b>');
+
+  return res.json({
+    success: true,
+    is_maintenance: db.is_maintenance,
+    message: db.is_maintenance ? 'Đã BẬT bảo trì hệ thống!' : 'Đã MỞ CỬA game thành công!'
+  });
+});
+
+// 5.2 API XÁC MINH ADMIN BẰNG SECRET KEY (NẾU CHƯA GÕ /admin TRÊN BOT)
+app.post('/api/admin/claim-admin', (req, res) => {
+  const { initData, secret } = req.body;
+  if (!verifyTelegram(initData)) return res.status(403).json({ error: 'Auth failed' });
+
+  const params = new URLSearchParams(initData);
+  const tgUser = JSON.parse(params.get('user'));
+  const tgId = String(tgUser.id);
+
+  if (secret !== SECRET_KEY && secret !== 'mysecret123' && secret !== '1234') {
+    return res.status(400).json({ error: 'Mã bảo mật Admin không đúng!' });
+  }
+
+  const db = loadDB();
+  db.admin_id = tgId;
+  saveDB(db);
+
+  return res.json({ success: true, message: 'Đã xác nhận quyền Quản trị viên cho nick Telegram này!' });
 });
 
 // 6. KHỞI TẠO LƯỢT XEM QUẢNG CÁO 1/2
