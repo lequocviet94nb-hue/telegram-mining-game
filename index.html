@@ -137,4 +137,923 @@
     </div>
   </div>
 
-  <!-- MÀN HÌNH ĐIỀU PHỐI QUẢNG CÁO 2 BƯỚC NỘI B
+  <!-- MÀN HÌNH ĐIỀU PHỐI QUẢNG CÁO 2 BƯỚC NỘI BỘ -->
+  <div id="ad-overlay-screen">
+    <div class="ad-modal-card">
+      <div id="ad-modal-icon" style="font-size: 45px; margin-bottom: 12px;">📺</div>
+      <h3 id="ad-modal-title" style="font-size: 17px; color: #fff; margin-bottom: 8px; font-weight: bold;">Đang Tải Quảng Cáo...</h3>
+      <p id="ad-modal-desc" style="font-size: 12px; color: #aaa; line-height: 1.5; margin-bottom: 20px;">Vui lòng giữ nguyên ứng dụng trong lúc quảng cáo đang phát.</p>
+      <button id="btn-next-step-ad" class="btn btn-primary" onclick="playSecondMonetagAd()" style="display: none; margin-bottom: 10px;">
+        ▶️ XEM TIẾP QUẢNG CÁO 2/2 ĐỂ NHẬN THƯỞNG
+      </button>
+      <button id="btn-cancel-ad" onclick="cancelAdModal()" style="background: none; border: none; color: #666; font-size: 12px; cursor: pointer; padding: 6px;">
+        Đóng
+      </button>
+    </div>
+  </div>
+
+  <!-- MÀN HÌNH BÁO TỪ CHỐI THIẾT BỊ -->
+  <div class="container" id="blocked-screen">
+    <div class="blocked-card">
+      <div class="blocked-icon">⛔</div>
+      <div class="blocked-title">TRUY CẬP BỊ TỪ CHỐI</div>
+      <div class="blocked-text" id="blocked-msg">
+        Thiết bị phần cứng này đã được liên kết với một tài khoản khác. Game chỉ cho phép 1 thiết bị = 1 tài khoản duy nhất.
+      </div>
+    </div>
+  </div>
+
+  <!-- MÀN HÌNH ĐĂNG KÝ -->
+  <div class="container" id="register-screen">
+    <div class="card" style="text-align: center; padding: 30px 16px;">
+      <div style="font-size: 40px; margin-bottom: 10px;">⚡</div>
+      <h2 style="font-size: 18px; margin-bottom: 6px; color: var(--primary);">ĐĂNG KÝ TÀI KHOẢN</h2>
+      <p style="font-size: 12px; color: var(--subtext); margin-bottom: 20px;">
+        Hệ thống tự động liên kết tài khoản duy nhất với thiết bị của bạn.
+      </p>
+
+      <form id="register-form" onsubmit="handleRegister(event)">
+        <div class="form-group" style="text-align: left;">
+          <label>Tên nhân vật / Biệt danh (Duy nhất):</label>
+          <input type="text" id="reg-username" class="form-control" placeholder="Ví dụ: MinerVN88" required minlength="3">
+        </div>
+        <div class="form-group" style="text-align: left;">
+          <label>Mã PIN bảo mật (4 - 6 số):</label>
+          <input type="password" id="reg-pin" class="form-control" placeholder="Mã PIN cá nhân" required minlength="4" maxlength="6">
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top: 10px;">KÍCH HOẠT MÁY IN TIỀN</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- GIAO DIỆN CHÍNH CỦA GAME -->
+  <div id="main-content" style="display: none;">
+    <div class="header">
+      <div class="title-logo">⚡ MÁY IN TIỀN VNĐ</div>
+      <div class="user-info" id="user-display">👤 Đang tải...</div>
+    </div>
+
+    <!-- TAB 1: MÁY IN TIỀN -->
+    <div class="container" id="tab-mining">
+      <div class="card balance-box">
+        <div class="balance-label">Tổng Số Dư Khả Dụng</div>
+        <div class="balance-amount" id="balance-display">0.00 VNĐ</div>
+        <div style="font-size: 11px; color: var(--primary); margin-top: 6px;">Tốc độ: +0.01 VNĐ / giây (~36 VNĐ/giờ)</div>
+      </div>
+
+      <div class="card">
+        <div class="fuel-box">
+          <div>
+            <div style="font-size: 12px; color: var(--subtext);">Thời Gian Nhiên Liệu Còn Lại:</div>
+            <div class="fuel-timer" id="fuel-display">00:00:00</div>
+          </div>
+          <div style="font-size: 24px;">⛽</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Nạp Nhiên Liệu & Kiếm Tiền (Xem 2 QC liên tiếp)</div>
+        <p style="font-size: 12px; color: var(--subtext); margin-bottom: 14px;">
+          Mỗi lượt bạn sẽ xem <strong>2 video quảng cáo</strong>. Bắt buộc phải xem hết từng video đến khi xuất hiện dấu <strong>[✕]</strong> và bấm dấu <strong>[✕]</strong> thì mới được nhận thưởng!
+        </p>
+
+        <button class="btn btn-fuel" onclick="startMonetagAdFlow('FUEL')" style="margin-bottom: 10px;">
+          ⛽ XEM QUẢNG CÁO (+10 PHÚT NHIÊN LIỆU)
+        </button>
+        <button class="btn btn-green" onclick="startMonetagAdFlow('CASH')">
+          💵 XEM QUẢNG CÁO (+2.00 VNĐ TIỀN TƯƠI)
+        </button>
+
+        <div class="hint-box">
+          💡 <strong>MẸO:</strong> Hãy xem hết từng video quảng cáo, đợi xuất hiện dấu [✕] ở góc trên rồi bấm vào [✕] để nhận thưởng an toàn 100%!
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: GIỚI THIỆU BẠN BÈ -->
+    <div class="container" id="tab-referral" style="display: none;">
+      <div class="card">
+        <div class="card-title">Sự Kiện Giới Thiệu Bạn Bè</div>
+        <p style="font-size: 13px; color: #ccc; line-height: 1.5; margin-bottom: 12px;">
+          Mời bạn bè cùng tham gia kiếm tiền. Khi 1 người bạn xem đủ <strong>5.000 quảng cáo</strong>, Admin sẽ nhận được thông báo và chuyển ngay <strong>10.000 VNĐ tiền mặt</strong> cho bạn!
+        </p>
+        <div class="form-group">
+          <label>Link giới thiệu của bạn:</label>
+          <input type="text" id="ref-link-input" class="form-control" readonly onclick="this.select();">
+        </div>
+        <button class="btn btn-green" onclick="copyRefLink()">Sao Chép Link Mời</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Danh Sách Bạn Bè Đã Mời (<span id="friends-count">0</span>)</div>
+        <div id="friends-list-container">
+          <p style="font-size: 12px; color: var(--subtext); text-align: center; padding: 10px;">Chưa có bạn bè nào tham gia qua link của bạn.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: ĐỔI THƯỞNG / RÚT TIỀN -->
+    <div class="container" id="tab-withdraw" style="display: none;">
+      <div class="card">
+        <div class="card-title">Rút Tiền Về Tài Khoản</div>
+        <p style="font-size: 12px; color: var(--subtext); margin-bottom: 14px;">
+          Hạn mức rút tối thiểu: <strong style="color: var(--accent);">5.000 VNĐ</strong>. Tiền sẽ được trừ ngay lập tức khi tạo lệnh.
+        </p>
+
+        <div class="form-group">
+          <label>Số tiền muốn rút (VNĐ):</label>
+          <input type="number" id="wd-amount" class="form-control" placeholder="Tối thiểu 5000" min="5000">
+          <div style="font-size: 11px; color: var(--subtext); margin-top: 4px;">Khả dụng: <span id="withdraw-available-bal" style="color: #fff;">0.00 VNĐ</span></div>
+        </div>
+
+        <div class="form-group">
+          <label>Phương thức nhận tiền:</label>
+          <select id="wd-method" class="form-control" onchange="updateAccountPlaceholder()">
+            <option value="MOMO">Ví MoMo</option>
+            <option value="ZALOPAY">Ví ZaloPay</option>
+            <option value="BANK">Tài khoản Ngân hàng (MB, VCB, Techcombank...)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label id="account-label">Số điện thoại nhận tiền:</label>
+          <input type="text" id="wd-account" class="form-control" placeholder="Nhập số điện thoại MoMo">
+        </div>
+
+        <button class="btn btn-primary" onclick="handleWithdraw()">XÁC NHẬN RÚT TIỀN NGAY</button>
+      </div>
+    </div>
+
+    <!-- TAB 4: QUẢN TRỊ DÀNH CHO ADMIN -->
+    <div class="container" id="tab-admin" style="display: none;">
+      <div class="card" id="admin-maint-card" style="border: 2px solid var(--primary); background: rgba(0, 255, 136, 0.04); margin-bottom: 16px;">
+        <div class="card-title" style="color: var(--primary); margin-bottom: 8px;">
+          <span>⚙️ CÔNG TẮC BẢO TRÌ TOÀN HỆ THỐNG</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <div>
+            <div style="font-size: 11px; color: var(--subtext);">Trạng thái hiện tại:</div>
+            <div id="maint-status-display" style="font-size: 14px; font-weight: bold; color: var(--primary); margin-top: 2px;">
+              🟢 ĐANG MỞ CỬA HOẠT ĐỘNG
+            </div>
+          </div>
+          <button id="btn-toggle-maint" onclick="handleToggleMaintFromApp()" style="padding: 10px 16px; font-size: 13px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; background: var(--danger); color: #fff; box-shadow: 0 4px 12px rgba(255,77,77,0.3);">
+            🔴 BẬT BẢO TRÌ NGAY
+          </button>
+        </div>
+        <div style="font-size: 11px; color: #888; line-height: 1.4; margin-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
+          💡 <strong>Quyền riêng tư:</strong> Khối này chỉ hiển thị duy nhất trên máy của Admin. Khi bạn bấm Bật/Tắt, toàn bộ người chơi sẽ tự động nhận lệnh trong 15 giây mà không cần bạn sửa code!
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">👑 Bảng Điều Khiển Admin (Chi tiết đơn đổi thưởng)</div>
+        <div id="admin-orders-container">
+          <p style="font-size: 12px; color: var(--subtext); text-align: center; padding: 10px;">Chưa có đơn đổi thưởng nào.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- THANH MENU TAB DƯỚI CÙNG -->
+    <div class="tabs-bar">
+      <div class="tab-item active" id="tab-btn-1" onclick="switchTab(1)">
+        <div class="tab-icon">⚡</div>
+        <div>Máy In</div>
+      </div>
+      <div class="tab-item" id="tab-btn-2" onclick="switchTab(2)">
+        <div class="tab-icon">👥</div>
+        <div>Bạn Bè</div>
+      </div>
+      <div class="tab-item" id="tab-btn-3" onclick="switchTab(3)">
+        <div class="tab-icon">💳</div>
+        <div>Rút Tiền</div>
+      </div>
+      <div class="tab-item" id="tab-btn-4" style="display: none;" onclick="switchTab(4)">
+        <div class="tab-icon">👑</div>
+        <div>Quản Trị</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    try {
+      if (tg) {
+        tg.ready();
+        tg.expand();
+      }
+    } catch(e) {}
+
+    function getUniqueDeviceId() {
+      let devId = null;
+      try {
+        devId = localStorage.getItem('DEVICE_LOCK_TOKEN');
+      } catch (e) {}
+
+      if (!devId) {
+        try {
+          const match = document.cookie.match(/(^|; )DEVICE_LOCK_TOKEN=([^;]+)/);
+          if (match) devId = decodeURIComponent(match[2]);
+        } catch (e) {}
+      }
+
+      if (!devId || devId.length < 15) {
+        const rand1 = Math.random().toString(36).substring(2, 10);
+        const rand2 = Math.random().toString(36).substring(2, 10);
+        devId = 'dev_' + Date.now().toString(36) + '_' + rand1 + rand2;
+      }
+
+      try {
+        localStorage.setItem('DEVICE_LOCK_TOKEN', devId);
+      } catch (e) {}
+      try {
+        document.cookie = 'DEVICE_LOCK_TOKEN=' + devId + '; max-age=315360000; path=/; SameSite=None; Secure';
+      } catch (e) {}
+
+      return devId;
+    }
+
+    const currentDeviceId = getUniqueDeviceId();
+    const hardwareFingerprint = currentDeviceId;
+
+    let balance = 0;
+    let fuelExpiresAt = 0;
+    let ratePerSec = 0.01;
+    let currentSessionId = null;
+    let miningTimerInterval = null;
+    let currentAdRewardType = 'CASH';
+    let currentAppVersion = null;
+    let userTelegramId = null;
+    let isAdminUser = false;
+    let isCurrentMaintenanceOn = false;
+
+    // Biến khóa thời gian quảng cáo nghiêm ngặt & chống kẹt màn hình
+    let ad1StartTime = 0;
+    let ad2StartTime = 0;
+    const MIN_AD_SECONDS = 14; // Bắt buộc xem tối thiểu 14-15 giây
+    let hasLoadedData = false;
+    let isRestoringSession = false;
+
+    // BỘ THOÁT HIỂM TỰ ĐỘNG CHỐNG TREO XOAY QUÁ 4.5 GIÂY
+    setTimeout(() => {
+      if (!hasLoadedData) {
+        const loadingEl = document.getElementById('loading-screen');
+        if (loadingEl) loadingEl.style.display = 'none';
+        const mc = document.getElementById('main-content');
+        const rs = document.getElementById('register-screen');
+        const ms = document.getElementById('maintenance-screen');
+        const bs = document.getElementById('blocked-screen');
+        const as = document.getElementById('auth-guide-screen');
+        if (mc.style.display !== 'block' && rs.style.display !== 'block' && ms.style.display !== 'block' && bs.style.display !== 'block' && as.style.display !== 'block') {
+          rs.style.display = 'block';
+        }
+      }
+    }, 4500);
+
+    function formatVND(amount) {
+      return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
+    }
+
+    function getTgUserId() {
+      if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+        return String(tg.initDataUnsafe.user.id);
+      }
+      return 'user_common';
+    }
+
+    function savePersistentSession(userData) {
+      const key = 'saved_session_' + getTgUserId();
+      try { localStorage.setItem(key, JSON.stringify(userData)); } catch (e) {}
+      if (tg.CloudStorage) {
+        tg.CloudStorage.setItem(key, JSON.stringify(userData), (e, r) => {});
+      }
+    }
+
+    function getPersistentSession(callback) {
+      let called = false;
+      const safeCallback = (val) => {
+        if (!called) { called = true; callback(val); }
+      };
+      setTimeout(() => safeCallback(null), 800);
+
+      const key = 'saved_session_' + getTgUserId();
+      try {
+        const local = localStorage.getItem(key);
+        if (local) {
+          return safeCallback(JSON.parse(local));
+        }
+      } catch (e) {}
+      if (tg.CloudStorage) {
+        tg.CloudStorage.getItem(key, (err, val) => {
+          if (!err && val) {
+            try { return safeCallback(JSON.parse(val)); } catch (e) {}
+          }
+          safeCallback(null);
+        });
+      } else {
+        safeCallback(null);
+      }
+    }
+
+    function switchTab(tabIndex) {
+      document.getElementById('tab-mining').style.display = tabIndex === 1 ? 'block' : 'none';
+      document.getElementById('tab-referral').style.display = tabIndex === 2 ? 'block' : 'none';
+      document.getElementById('tab-withdraw').style.display = tabIndex === 3 ? 'block' : 'none';
+      document.getElementById('tab-admin').style.display = tabIndex === 4 ? 'block' : 'none';
+
+      document.getElementById('tab-btn-1').className = 'tab-item' + (tabIndex === 1 ? ' active' : '');
+      document.getElementById('tab-btn-2').className = 'tab-item' + (tabIndex === 2 ? ' active' : '');
+      document.getElementById('tab-btn-3').className = 'tab-item' + (tabIndex === 3 ? ' active' : '');
+      if (document.getElementById('tab-btn-4')) {
+        document.getElementById('tab-btn-4').className = 'tab-item' + (tabIndex === 4 ? ' active' : '');
+      }
+
+      if (tabIndex === 3) {
+        document.getElementById('withdraw-available-bal').innerText = formatVND(balance);
+      }
+      if (tabIndex === 4 && isAdminUser) {
+        loadAdminData();
+      }
+    }
+
+    function updateAccountPlaceholder() {
+      const method = document.getElementById('wd-method').value;
+      const label = document.getElementById('account-label');
+      const input = document.getElementById('wd-account');
+      if (method === 'BANK') {
+        label.innerText = 'Số tài khoản + Tên Ngân Hàng + Tên Chủ Thẻ:';
+        input.placeholder = 'Ví dụ: 1903... MB Bank - NGUYEN VAN A';
+      } else {
+        label.innerText = 'Số điện thoại nhận tiền:';
+        input.placeholder = 'Ví dụ: 0987654321';
+      }
+    }
+
+    function startMiningLoop() {
+      if (miningTimerInterval) clearInterval(miningTimerInterval);
+      miningTimerInterval = setInterval(() => {
+        const now = Math.floor(Date.now() / 1000);
+        if (now < fuelExpiresAt) {
+          balance += ratePerSec;
+          document.getElementById('balance-display').innerText = formatVND(balance);
+          const diff = fuelExpiresAt - now;
+          const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+          const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+          const s = String(diff % 60).padStart(2, '0');
+          document.getElementById('fuel-display').innerText = `${h}:${m}:${s}`;
+        } else {
+          document.getElementById('fuel-display').innerText = "HẾT NHIÊN LIỆU";
+        }
+      }, 1000);
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const username = document.getElementById('reg-username').value.trim();
+      const pin = document.getElementById('reg-pin').value.trim();
+
+      const params = new URLSearchParams(window.location.search);
+      let refCode = params.get('tgWebAppStartParam') || '';
+      if (!refCode && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+        refCode = tg.initDataUnsafe.start_param;
+      }
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData: tg.initData,
+            username: username,
+            pin: pin,
+            deviceId: currentDeviceId,
+            hardwareFingerprint: currentDeviceId,
+            refCode: refCode
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          savePersistentSession({
+            username: username,
+            pin: pin,
+            hardwareFingerprint: currentDeviceId,
+            balance: 0,
+            fuel_expires_at: Math.floor(Date.now() / 1000),
+            invited_by: null
+          });
+          loadData();
+        } else {
+          alert(data.error || "Đăng ký thất bại!");
+        }
+      } catch (err) {
+        alert("Lỗi kết nối máy chủ khi đăng ký!");
+      }
+    }
+
+    async function loadData() {
+      const loadingEl = document.getElementById('loading-screen');
+      const hideLoading = () => { 
+        hasLoadedData = true; 
+        if (loadingEl) loadingEl.style.display = 'none'; 
+      };
+
+      try {
+        const res = await fetch('/api/user-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData: (tg && tg.initData) ? tg.initData : '',
+            deviceId: currentDeviceId,
+            hardwareFingerprint: currentDeviceId
+          })
+        });
+
+        if (!res.ok) {
+          hideLoading();
+          document.getElementById('auth-guide-screen').style.display = 'block';
+          document.getElementById('maintenance-screen').style.display = 'none';
+          document.getElementById('blocked-screen').style.display = 'none';
+          document.getElementById('register-screen').style.display = 'none';
+          document.getElementById('main-content').style.display = 'none';
+          return;
+        }
+
+        const data = await res.json();
+        hideLoading();
+
+        if (data.maintenance) {
+          document.getElementById('maintenance-screen').style.display = 'block';
+          document.getElementById('blocked-screen').style.display = 'none';
+          document.getElementById('register-screen').style.display = 'none';
+          document.getElementById('main-content').style.display = 'none';
+          return;
+        }
+
+        if (data.device_blocked) {
+          document.getElementById('blocked-screen').style.display = 'block';
+          document.getElementById('blocked-msg').innerText = data.error;
+          document.getElementById('register-screen').style.display = 'none';
+          document.getElementById('main-content').style.display = 'none';
+          return;
+        }
+
+        if (data.success) {
+          if (!data.is_registered) {
+            if (!isRestoringSession) {
+              isRestoringSession = true;
+              getPersistentSession(async (savedSession) => {
+                if (savedSession && savedSession.username) {
+                  try {
+                    await fetch('/api/restore-account', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ initData: tg.initData, backup: savedSession, deviceId: currentDeviceId })
+                    });
+                    return loadData();
+                  } catch(err) {}
+                }
+                document.getElementById('register-screen').style.display = 'block';
+                document.getElementById('main-content').style.display = 'none';
+              });
+            } else {
+              document.getElementById('register-screen').style.display = 'block';
+              document.getElementById('main-content').style.display = 'none';
+            }
+          } else {
+            document.getElementById('maintenance-screen').style.display = 'none';
+            document.getElementById('register-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+            document.getElementById('user-display').innerText = '👤 Tài khoản: ' + data.user.username;
+            balance = data.user.balance;
+            fuelExpiresAt = data.user.fuel_expires_at;
+            ratePerSec = data.user.rate_per_sec;
+            userTelegramId = data.user.telegram_id;
+            isAdminUser = data.is_admin;
+
+            if (isAdminUser) {
+              document.getElementById('tab-btn-4').style.display = 'flex';
+              if (typeof data.is_maintenance === 'boolean') {
+                updateMaintUI(data.is_maintenance);
+              }
+            }
+
+            const refLink = 'https://t.me/mayintien2026_bot/play?startapp=ref_' + userTelegramId;
+            document.getElementById('ref-link-input').value = refLink;
+
+            savePersistentSession({
+              username: data.user.username,
+              pin: data.user.pin,
+              hardwareFingerprint: hardwareFingerprint,
+              balance: balance,
+              fuel_expires_at: fuelExpiresAt,
+              invited_by: data.user.invited_by
+            });
+
+            renderFriendsList(data.user.friends || []);
+            startMiningLoop();
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        hideLoading();
+        document.getElementById('register-screen').style.display = 'block';
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function promptAdminLoginWeb() {
+      const pin = prompt('Nhập mã bảo mật Quản trị viên (PIN):');
+      if (!pin) return;
+      try {
+        const res = await fetch('/api/admin/web-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secret: pin.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Đăng nhập Quản trị viên Web thành công!');
+          document.getElementById('auth-guide-screen').style.display = 'none';
+          document.getElementById('main-content').style.display = 'block';
+          document.getElementById('tab-btn-4').style.display = 'flex';
+          isAdminUser = true;
+          switchTab(4);
+          loadAdminData();
+        } else {
+          alert('❌ ' + (data.error || 'Mã bảo mật không đúng!'));
+        }
+      } catch (e) {
+        alert('Lỗi kết nối: ' + e.message);
+      }
+    }
+
+    async function promptAdminLogin() {
+      const pin = prompt('Nhập mã bảo mật Quản trị viên (PIN):');
+      if (!pin) return;
+      try {
+        const res = await fetch('/api/admin/claim-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, secret: pin.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Xác nhận Chủ Game thành công! Đang mở bảng điều khiển...');
+          document.getElementById('maintenance-screen').style.display = 'none';
+          document.getElementById('main-content').style.display = 'block';
+          document.getElementById('tab-btn-4').style.display = 'flex';
+          isAdminUser = true;
+          switchTab(4);
+          loadAdminData();
+        } else {
+          alert('❌ ' + (data.error || 'Mã bảo mật không đúng!'));
+        }
+      } catch (e) {
+        alert('Lỗi kết nối: ' + e.message);
+      }
+    }
+
+    function updateMaintUI(isOn) {
+      isCurrentMaintenanceOn = isOn;
+      const statusEl = document.getElementById('maint-status-display');
+      const btnEl = document.getElementById('btn-toggle-maint');
+      const cardEl = document.getElementById('admin-maint-card');
+      if (isOn) {
+        statusEl.innerHTML = '🔴 ĐANG BẬT BẢO TRÌ (Người chơi bị chặn)';
+        statusEl.style.color = 'var(--danger)';
+        btnEl.innerText = '🟢 MỞ CỬA GAME LẠI';
+        btnEl.style.background = 'var(--primary)';
+        btnEl.style.color = '#000';
+        cardEl.style.borderColor = 'var(--danger)';
+      } else {
+        statusEl.innerHTML = '🟢 ĐANG MỞ CỬA HOẠT ĐỘNG';
+        statusEl.style.color = 'var(--primary)';
+        btnEl.innerText = '🔴 BẬT BẢO TRÌ NGAY';
+        btnEl.style.background = 'var(--danger)';
+        btnEl.style.color = '#fff';
+        cardEl.style.borderColor = 'var(--primary)';
+      }
+    }
+
+    async function handleToggleMaintFromApp() {
+      const actionName = isCurrentMaintenanceOn ? 'MỞ CỬA LẠI GAME' : 'BẬT BẢO TRÌ HỆ THỐNG';
+      if (!confirm(`Bạn có chắc chắn muốn [${actionName}] không?`)) return;
+
+      try {
+        const res = await fetch('/api/admin/toggle-maintenance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, enable: !isCurrentMaintenanceOn })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ ' + data.message);
+          updateMaintUI(data.is_maintenance);
+        } else {
+          alert('❌ ' + (data.error || 'Thao tác thất bại!'));
+        }
+      } catch (e) {
+        alert('Lỗi kết nối máy chủ!');
+      }
+    }
+
+    function showAdOverlay(icon, title, desc, showNextBtn) {
+      document.getElementById('ad-modal-icon').innerText = icon;
+      document.getElementById('ad-modal-title').innerText = title;
+      document.getElementById('ad-modal-desc').innerText = desc;
+      document.getElementById('btn-next-step-ad').style.display = showNextBtn ? 'block' : 'none';
+      document.getElementById('ad-overlay-screen').style.display = 'flex';
+    }
+
+    function cancelAdModal() {
+      document.getElementById('ad-overlay-screen').style.display = 'none';
+      document.getElementById('btn-next-step-ad').style.display = 'none';
+    }
+
+    // === QUẢNG CÁO 1/2 VỚI BỘ ĐẾM 15 GIÂY & BẮT BUỘC BẤM DẤU [X] ===
+    async function startMonetagAdFlow(rewardType) {
+      currentAdRewardType = rewardType || 'CASH';
+
+      if (typeof window.show_12184288 !== 'function') {
+        return alert("Đang kết nối tới máy chủ Monetag, bạn vui lòng bấm lại sau 2 giây nhé!");
+      }
+
+      if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+      try {
+        const res = await fetch('/api/start-ad-1', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, rewardType: currentAdRewardType })
+        });
+        const data = await res.json();
+        if (!data.success) return alert(data.error || "Lỗi khởi tạo phiên quảng cáo!");
+
+        currentSessionId = data.sessionId;
+        ad1StartTime = Date.now();
+
+        showAdOverlay(
+          "📺", 
+          "Đang mở Quảng Cáo (1/2)...", 
+          "⚠️ QUY ĐỊNH BẮT BUỘC: Bạn PHẢI xem hết video quảng cáo đến khi xuất hiện dấu [✕] và bấm vào dấu [✕] để tắt. Nếu bỏ qua giữa chừng sẽ KHÔNG được cộng thưởng!", 
+          false
+        );
+
+        window.show_12184288().then(async () => {
+          const elapsed1 = Math.floor((Date.now() - ad1StartTime) / 1000);
+          
+          if (elapsed1 < MIN_AD_SECONDS) {
+            cancelAdModal();
+            return alert("⛔ BẠN ĐÃ BỎ QUA QUẢNG CÁO QUÁ SỚM! (Mới xem được " + elapsed1 + " giây / 15 giây).\n\n⚠️ Bạn bắt buộc phải xem hết video đến khi xuất hiện dấu [✕] và bấm đóng thì mới được tính thưởng!");
+          }
+
+          if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+          showAdOverlay(
+            "✅",
+            "ĐÃ XONG QUẢNG CÁO (1/2)!",
+            "Bạn đã xem xong đầy đủ quảng cáo thứ 1 (" + elapsed1 + "s). Hãy bấm nút bên dưới để xem tiếp quảng cáo (2/2) và nhận thưởng nhé!",
+            true
+          );
+
+          setTimeout(() => {
+            const nextBtn = document.getElementById('btn-next-step-ad');
+            if (nextBtn && nextBtn.style.display === 'block') {
+              playSecondMonetagAd();
+            }
+          }, 2000);
+
+        }).catch((err) => {
+          console.error(err);
+          cancelAdModal();
+          alert("Quảng cáo bị tắt sớm hoặc gặp gián đoạn. Bạn vui lòng xem hết video và bấm dấu [✕] để được cộng thưởng nhé!");
+        });
+
+      } catch (e) {
+        cancelAdModal();
+        alert("Lỗi kết nối máy chủ khi mở quảng cáo!");
+      }
+    }
+
+    // === QUẢNG CÁO 2/2 VỚI BỘ ĐẾM 15 GIÂY & BẮT BUỘC BẤM DẤU [X] ===
+    async function playSecondMonetagAd() {
+      document.getElementById('btn-next-step-ad').style.display = 'none';
+
+      if (typeof window.show_12184288 !== 'function') {
+        return alert("Lỗi nạp SDK Monetag, vui lòng thử lại!");
+      }
+
+      try {
+        const start2Res = await fetch('/api/start-ad-2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, sessionId: currentSessionId })
+        });
+        const start2Data = await start2Res.json();
+        if (!start2Data.success) {
+          cancelAdModal();
+          return alert(start2Data.error || "Lỗi kiểm tra quảng cáo 1!");
+        }
+
+        ad2StartTime = Date.now();
+        showAdOverlay(
+          "📺", 
+          "Đang mở Quảng Cáo (2/2)...", 
+          "⚠️ QUY ĐỊNH BẮT BUỘC: Hãy xem hết video quảng cáo cuối cùng đến khi có dấu [✕] và bấm vào dấu [✕] để nhận tiền mặt / nhiên liệu!", 
+          false
+        );
+
+        window.show_12184288().then(async () => {
+          const elapsed2 = Math.floor((Date.now() - ad2StartTime) / 1000);
+
+          if (elapsed2 < MIN_AD_SECONDS) {
+            cancelAdModal();
+            return alert("⛔ BẠN ĐÃ BỎ QUA QUẢNG CÁO (2/2) QUÁ SỚM! (Mới xem được " + elapsed2 + " giây / 15 giây).\n\n⚠️ Bạn bắt buộc phải xem hết toàn bộ video và bấm dấu [✕] mới được nhận thưởng!");
+          }
+
+          showAdOverlay("⏳", "Đang đối soát nhận thưởng...", "Hệ thống đang cộng tiền vào tài khoản của bạn...", false);
+
+          const claimRes = await fetch('/api/claim-reward-double', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: tg.initData, sessionId: currentSessionId })
+          });
+          const result = await claimRes.json();
+
+          cancelAdModal();
+
+          if (result.success) {
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            alert(result.message);
+            loadData();
+          } else {
+            alert(result.message || "Chưa hoàn thành xem quảng cáo!");
+          }
+
+        }).catch((err) => {
+          console.error(err);
+          cancelAdModal();
+          alert("Bạn chưa xem hết quảng cáo thứ 2 nên chưa được cộng thưởng!");
+        });
+
+      } catch (e) {
+        cancelAdModal();
+        alert("Lỗi kết nối khi mở quảng cáo thứ 2!");
+      }
+    }
+
+    function copyRefLink() {
+      const input = document.getElementById('ref-link-input');
+      input.select();
+      document.execCommand('copy');
+      alert("Đã sao chép link mời bạn bè thành công!");
+    }
+
+    function renderFriendsList(friends) {
+      const container = document.getElementById('friends-list-container');
+      document.getElementById('friends-count').innerText = friends.length;
+      if (friends.length === 0) {
+        container.innerHTML = '<p style="font-size: 12px; color: var(--subtext); text-align: center; padding: 10px;">Chưa có bạn bè nào tham gia qua link của bạn.</p>';
+        return;
+      }
+      let html = '';
+      friends.forEach(f => {
+        html += `
+          <div class="friend-row">
+            <div>
+              <div style="font-size: 13px; font-weight: bold; color: #fff;">${f.username}</div>
+              <div style="font-size: 11px; color: var(--subtext);">Đã xem: ${f.ads_watched}/5.000 QC</div>
+            </div>
+            <div>
+              ${f.is_completed 
+                ? '<span class="order-badge badge-approved">ĐÃ ĐẠT 10.000 VNĐ</span>' 
+                : '<span class="order-badge badge-pending">Đang cày</span>'}
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    async function handleWithdraw() {
+      const amount = document.getElementById('wd-amount').value;
+      const method = document.getElementById('wd-method').value;
+      const account = document.getElementById('wd-account').value.trim();
+
+      if (!amount || parseFloat(amount) < 5000) {
+        return alert("Số tiền rút tối thiểu là 5.000 VNĐ!");
+      }
+      if (!account) {
+        return alert("Vui lòng điền thông tin tài khoản nhận tiền!");
+      }
+
+      try {
+        const res = await fetch('/api/withdraw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData: tg.initData,
+            amount: amount,
+            method: method,
+            accountInfo: account
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("🎉 " + data.message);
+          document.getElementById('wd-amount').value = '';
+          document.getElementById('wd-account').value = '';
+          loadData();
+          switchTab(1);
+        } else {
+          alert(data.error || "Rút tiền thất bại!");
+        }
+      } catch (e) {
+        alert("Lỗi kết nối khi gửi yêu cầu rút tiền!");
+      }
+    }
+
+    async function loadAdminData() {
+      try {
+        const res = await fetch('/api/admin/orders?initData=' + encodeURIComponent(tg.initData));
+        const data = await res.json();
+        if (data.success) {
+          renderAdminOrders(data.withdrawals);
+        }
+      } catch (e) {}
+    }
+
+    function renderAdminOrders(orders) {
+      const container = document.getElementById('admin-orders-container');
+      if (orders.length === 0) {
+        container.innerHTML = '<p style="font-size: 12px; color: var(--subtext); text-align: center; padding: 10px;">Chưa có đơn đổi thưởng nào.</p>';
+        return;
+      }
+      let html = '';
+      orders.forEach(o => {
+        const isPending = o.status === 'PENDING';
+        html += `
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-weight: bold; color: #fff;">${o.username}</span>
+              <span class="order-badge ${isPending ? 'badge-pending' : 'badge-approved'}">${isPending ? 'CHỜ DUYỆT' : 'ĐÃ DUYỆT'}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--subtext); line-height: 1.5;">
+              Số tiền: <strong style="color: var(--primary);">${formatVND(o.amount)}</strong><br>
+              Hình thức: <strong>${o.method}</strong><br>
+              Tài khoản: <code>${o.account_info}</code>
+            </div>
+            ${isPending ? `<button class="btn btn-primary" onclick="approveOrder('${o.id}')" style="margin-top: 10px; padding: 8px; font-size: 12px;">✅ DUYỆT ĐƠN NÀY</button>` : ''}
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    async function approveOrder(orderId) {
+      if (!confirm("Xác nhận bạn đã chuyển tiền thành công cho người chơi này?")) return;
+      try {
+        const res = await fetch('/api/admin/approve-withdraw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, orderId: orderId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          loadAdminData();
+        } else {
+          alert(data.error || "Duyệt thất bại!");
+        }
+      } catch (e) {
+        alert("Lỗi kết nối khi duyệt đơn!");
+      }
+    }
+
+    async function checkForUpdates() {
+      try {
+        const res = await fetch('/api/version?_t=' + Date.now());
+        const data = await res.json();
+        if (data && data.version) {
+          if (!currentAppVersion) {
+            currentAppVersion = data.version;
+          } else if (currentAppVersion !== data.version) {
+            currentAppVersion = data.version;
+            window.location.replace(window.location.pathname + '?_update=' + Date.now());
+          }
+        }
+      } catch (e) {}
+    }
+    setInterval(checkForUpdates, 15000);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkForUpdates();
+      }
+    });
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
