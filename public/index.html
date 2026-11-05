@@ -109,9 +109,38 @@
       from { transform: translateY(0); }
       to { transform: translateY(-8px); }
     }
-  </style>
+  
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
+
+  <!-- MÀN HÌNH ĐANG TẢI (TRÁNH BỊ MÀN HÌNH ĐEN KHI SERVER KHỞI ĐỘNG HOẶC MẠNG CHẬM) -->
+  <div id="loading-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; text-align: center; padding: 20px;">
+    <div style="width: 50px; height: 50px; border: 4px solid rgba(0,255,136,0.15); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 20px;"></div>
+    <div style="font-weight: 800; font-size: 18px; color: var(--primary); letter-spacing: 0.5px;">⚡ MÁY IN TIỀN TỰ ĐỘNG</div>
+    <div style="font-size: 13px; color: var(--subtext); margin-top: 8px;">Đang kết nối hệ thống kiếm tiền...</div>
+  </div>
+
+  <!-- MÀN HÌNH HƯỚNG DẪN KHI MỞ NGOÀI TELEGRAM (HOẶC MỞ QUA LINK WEB THƯỜNG) -->
+  <div class="container" id="auth-guide-screen" style="display: none;">
+    <div class="card" style="text-align: center; padding: 35px 20px; border-color: var(--fuel);">
+      <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
+      <h2 style="font-size: 18px; color: var(--fuel); margin-bottom: 12px; font-weight: 800;">VUI LÒNG MỞ QUA TELEGRAM BOT</h2>
+      <p style="font-size: 13px; color: #ccc; line-height: 1.6; margin-bottom: 20px;">
+        Bạn đang truy cập qua trình duyệt thông thường hoặc mở liên kết ngoài.<br><br>
+        Để tài khoản được nhận dạng bảo mật và số dư tự động tăng thụ động 24/7, vui lòng mở game bên trong <b>Telegram Bot</b>!
+      </p>
+      <a href="https://t.me/mayintien2026_bot/play" target="_blank" class="btn btn-primary" style="margin-bottom: 15px; text-decoration: none; display: block; font-size: 15px;">
+        ⚡ MỞ GAME TRÊN TELEGRAM BOT ⚡
+      </a>
+      <div style="margin-top: 20px;">
+        <button onclick="promptAdminLoginWeb()" style="background: none; border: none; color: #777; font-size: 12px; cursor: pointer; text-decoration: underline;">
+          🔐 Dành riêng cho Chủ Game (Đăng nhập Quản Trị trên Web)
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- MÀN HÌNH BẢO TRÌ HỆ THỐNG -->
   <div class="container" id="maintenance-screen" style="display: none;">
@@ -352,7 +381,12 @@
 
   <script>
     const tg = window.Telegram.WebApp;
-    tg.expand();
+    try {
+      if (tg) {
+        tg.ready();
+        tg.expand();
+      }
+    } catch(e) {}
 
     // === BỘ NHẬN DIỆN THIẾT BỊ ĐỘC QUYỀN (CHỐNG TRÙNG LẶP MÁY KHÁC, KHÓA CHẶT 1 MÁY = 1 TÀI KHOẢN) ===
     function getUniqueDeviceId() {
@@ -476,16 +510,32 @@
     // TỰ ĐỘNG ĐĂNG NHẬP VÀ ĐỒNG BỘ DỮ LIỆU
     async function loadData() {
       try {
+        const loadingEl = document.getElementById('loading-screen');
+        const hideLoading = () => { if (loadingEl) loadingEl.style.display = 'none'; };
+
         const res = await fetch('/api/user-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            initData: tg.initData,
+            initData: (tg && tg.initData) ? tg.initData : '',
             deviceId: currentDeviceId,
             hardwareFingerprint: currentDeviceId
           })
         });
+
+        // NẾU KHÔNG CÓ initData HOẶC XÁC THỰC THẤT BẠI (MỞ TỪ LINK WEB NGOÀI)
+        if (!res.ok) {
+          hideLoading();
+          document.getElementById('auth-guide-screen').style.display = 'block';
+          document.getElementById('maintenance-screen').style.display = 'none';
+          document.getElementById('blocked-screen').style.display = 'none';
+          document.getElementById('register-screen').style.display = 'none';
+          document.getElementById('main-content').style.display = 'none';
+          return;
+        }
+
         const data = await res.json();
+        hideLoading();
 
         // NẾU HỆ THỐNG ĐANG BẢO TRÌ
         if (data.maintenance) {
@@ -860,7 +910,34 @@
     }
 
     // ĐĂNG NHẬP ADMIN TRỰC TIẾP TỪ MÀN HÌNH BẢO TRÌ NẾU CHƯA XÁC NHẬN TRÊN BOT
-    async function promptAdminLogin() {
+    async 
+    async function promptAdminLoginWeb() {
+      const pin = prompt('Nhập mã bảo mật Quản trị viên (PIN):');
+      if (!pin) return;
+      try {
+        const res = await fetch('/api/admin/web-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secret: pin.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Đăng nhập Quản trị viên Web thành công!');
+          document.getElementById('auth-guide-screen').style.display = 'none';
+          document.getElementById('main-content').style.display = 'block';
+          document.getElementById('tab-btn-4').style.display = 'flex';
+          isAdminUser = true;
+          switchTab(4);
+          loadAdminData();
+        } else {
+          alert('❌ ' + (data.error || 'Mã bảo mật không đúng!'));
+        }
+      } catch (e) {
+        alert('Lỗi kết nối: ' + e.message);
+      }
+    }
+
+    function promptAdminLogin() {
       const secret = prompt("Nhập mã bảo mật Quản trị viên (Mặc định: mysecret123 hoặc 1234):");
       if (!secret) return;
 
