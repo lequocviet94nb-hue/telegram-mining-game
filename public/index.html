@@ -192,7 +192,7 @@
   </div>
 
   <!-- MÀN HÌNH ĐĂNG KÝ TÀI KHOẢN MỚI -->
-  <div class="container" id="register-screen">
+  <div class="container" id="register-screen" style="display: none !important;">
     <div class="card">
       <div class="card-title">Khởi Tạo Tài Khoản Lần Đầu</div>
       <p style="font-size: 13px; color: var(--subtext); margin-bottom: 16px;">Mỗi thiết bị chỉ được phép đăng ký duy nhất 1 tài khoản.</p>
@@ -466,7 +466,7 @@
         const bs = document.getElementById('blocked-screen');
         const as = document.getElementById('auth-guide-screen');
         if (mc.style.display !== 'block' && rs.style.display !== 'block' && ms.style.display !== 'block' && bs.style.display !== 'block' && as.style.display !== 'block') {
-          rs.style.display = 'block';
+          mc.style.display = 'block'; rs.style.display = 'none';
         }
       }
     }, 4500);
@@ -551,6 +551,60 @@
       }
     }
 
+    
+    // TỰ ĐỘNG ĐĂNG KÝ VÀ BẢO TOÀN DỮ LIỆU
+    async function handleRegister(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const uEl = document.getElementById('reg-username');
+      const pEl = document.getElementById('reg-pin');
+      const username = (uEl && uEl.value.trim()) ? uEl.value.trim() : ((tg.initDataUnsafe && tg.initDataUnsafe.user && (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name)) || 'NguoiChoi');
+      const pin = (pEl && pEl.value.trim()) ? pEl.value.trim() : '1234';
+
+      const params = new URLSearchParams(window.location.search);
+      let refCode = params.get('tgWebAppStartParam') || (tg.initDataUnsafe && tg.initDataUnsafe.start_param ? tg.initDataUnsafe.start_param : '') || '';
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData: tg.initData,
+            username: username,
+            pin: pin,
+            deviceId: currentDeviceId,
+            hardwareFingerprint: currentDeviceId,
+            refCode: refCode
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          savePersistentSession({
+            username: username,
+            pin: pin,
+            hardwareFingerprint: currentDeviceId,
+            balance: 0,
+            fuel_expires_at: Math.floor(Date.now() / 1000) + 7200,
+            ads_watched: 0
+          });
+          const rs = document.getElementById('register-screen');
+          if (rs) rs.style.display = 'none';
+          document.getElementById('main-content').style.display = 'block';
+          loadData();
+        } else {
+          // Nếu đã tồn tại, vẫn cho vào thẳng game
+          const rs = document.getElementById('register-screen');
+          if (rs) rs.style.display = 'none';
+          document.getElementById('main-content').style.display = 'block';
+          loadData();
+        }
+      } catch (err) {
+        const rs = document.getElementById('register-screen');
+        if (rs) rs.style.display = 'none';
+        document.getElementById('main-content').style.display = 'block';
+        loadData();
+      }
+    }
+
     // TỰ ĐỘNG ĐĂNG NHẬP VÀ ĐỒNG BỘ DỮ LIỆU
     async function loadData() {
       const loadingEl = document.getElementById('loading-screen');
@@ -604,26 +658,59 @@
 
         if (data.success) {
           if (!data.is_registered) {
-            if (!isRestoringSession) {
-              isRestoringSession = true;
-              getPersistentSession(async (savedSession) => {
-                if (savedSession && savedSession.username) {
-                  try {
-                    await fetch('/api/restore-account', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ initData: tg.initData, backup: savedSession, deviceId: currentDeviceId })
-                    });
-                    return loadData();
-                  } catch(err) {}
+            // TỰ ĐỘNG KHÔI PHỤC TỪ CLOUDSTORAGE HOẶC TỰ TẠO TÀI KHOẢN VÀ VÀO THẲNG GAME CŨ
+            getPersistentSession(async (savedSession) => {
+              if (savedSession && savedSession.username) {
+                try {
+                  const resRestore = await fetch('/api/restore-account', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData: tg.initData, backup: savedSession, deviceId: currentDeviceId })
+                  });
+                  const dRestore = await resRestore.json();
+                  if (dRestore.success) return loadData();
+                } catch(err) {}
+              }
+
+              // Tự động khởi tạo tài khoản theo Telegram và vào thẳng game (không hiện form đăng ký nữa)
+              const tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user : null;
+              const autoUsername = (tgUser && (tgUser.username || tgUser.first_name)) ? (tgUser.username || tgUser.first_name) : ('NguoiChoi_' + (tgUser ? String(tgUser.id).slice(-4) : Math.floor(Math.random() * 10000)));
+              const params = new URLSearchParams(window.location.search);
+              let refCode = params.get('tgWebAppStartParam') || (tg.initDataUnsafe && tg.initDataUnsafe.start_param ? tg.initDataUnsafe.start_param : '') || '';
+
+              try {
+                const resReg = await fetch('/api/register', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    initData: tg.initData,
+                    username: autoUsername,
+                    pin: '1234',
+                    deviceId: currentDeviceId,
+                    hardwareFingerprint: currentDeviceId,
+                    refCode: refCode
+                  })
+                });
+                const dReg = await resReg.json();
+                if (dReg.success) {
+                  savePersistentSession({
+                    username: autoUsername,
+                    pin: '1234',
+                    hardwareFingerprint: currentDeviceId,
+                    balance: 0,
+                    fuel_expires_at: Math.floor(Date.now() / 1000) + 7200,
+                    ads_watched: 0
+                  });
+                  return loadData();
                 }
-                document.getElementById('register-screen').style.display = 'block';
-                document.getElementById('main-content').style.display = 'none';
-              });
-            } else {
-              document.getElementById('register-screen').style.display = 'block';
-              document.getElementById('main-content').style.display = 'none';
-            }
+              } catch (e) {}
+
+              // Đảm bảo luôn mở giao diện chính
+              const rs = document.getElementById('register-screen');
+              if (rs) rs.style.display = 'none';
+              document.getElementById('main-content').style.display = 'block';
+            });
+            return;
           } else {
             // ĐÃ ĐĂNG NHẬP THÀNH CÔNG -> VÀO THẲNG GAME
             document.getElementById('maintenance-screen').style.display = 'none';
@@ -651,11 +738,12 @@
 
             savePersistentSession({
               username: data.user.username,
-              pin: data.user.pin,
-              hardwareFingerprint: hardwareFingerprint,
+              pin: data.user.pin || '1234',
+              hardwareFingerprint: currentDeviceId,
               balance: balance,
               fuel_expires_at: fuelExpiresAt,
-              invited_by: data.user.invited_by
+              ads_watched: data.user.ads_watched || 0,
+              invited_by: data.user.invited_by || null
             });
 
             renderFriendsList(data.user.friends || []);
