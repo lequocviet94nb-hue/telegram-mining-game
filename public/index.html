@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>M├íy In Tiß╗ün Tß╗▒ ─Éß╗Öng</title>
+  <title>Máy In Tiền Tự Động</title>
   
   <!-- TELEGRAM WEBAPP API -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- MONETAG CH├ìNH THß╗¿C CHO TELEGRAM MINI APP (CHUß║¿N CYBERPET) -->
+  <!-- MONETAG CHÍNH THỨC CHO TELEGRAM MINI APP (CHUẨN CYBERPET) -->
   <script src="https://libtl.com/sdk.js" data-zone="12184288" data-sdk="show_12184288"></script>
 
   <style>
@@ -76,7 +76,7 @@
     .admin-badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
     .badge-pending { background: #553300; color: #ffaa00; }
 
-    /* === M├ÇN H├îNH ─ÉIß╗ÇU H╞»ß╗ÜNG QUß║óNG C├üO Nß╗ÿI Bß╗ÿ === */
+    /* === MÀN HÌNH ĐIỀU HƯỚNG QUẢNG CÁO NỘI BỘ === */
     #ad-overlay-screen {
       display: none;
       position: fixed;
@@ -115,201 +115,201 @@
 </head>
 <body>
 
-  <!-- M├ÇN H├îNH ─ÉANG Tß║óI (TR├üNH Bß╗è M├ÇN H├îNH ─ÉEN KHI SERVER KHß╗₧I ─Éß╗ÿNG HOß║╢C Mß║áNG CHß║¼M) -->
+  <!-- MÀN HÌNH ĐANG TẢI (TRÁNH BỊ MÀN HÌNH ĐEN KHI SERVER KHỞI ĐỘNG HOẶC MẠNG CHẬM) -->
   <div id="loading-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; text-align: center; padding: 20px;">
     <div style="width: 50px; height: 50px; border: 4px solid rgba(0,255,136,0.15); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 20px;"></div>
-    <div style="font-weight: 800; font-size: 18px; color: var(--primary); letter-spacing: 0.5px;">ΓÜí M├üY IN TIß╗ÇN Tß╗░ ─Éß╗ÿNG</div>
-    <div style="font-size: 13px; color: var(--subtext); margin-top: 8px;">─Éang kß║┐t nß╗æi hß╗ç thß╗æng kiß║┐m tiß╗ün...</div>
+    <div style="font-weight: 800; font-size: 18px; color: var(--primary); letter-spacing: 0.5px;">⚡ MÁY IN TIỀN TỰ ĐỘNG</div>
+    <div style="font-size: 13px; color: var(--subtext); margin-top: 8px;">Đang kết nối hệ thống kiếm tiền...</div>
   </div>
 
-  <!-- M├ÇN H├îNH H╞»ß╗ÜNG Dß║¬N KHI Mß╗₧ NGO├ÇI TELEGRAM (HOß║╢C Mß╗₧ QUA LINK WEB TH╞»ß╗£NG) -->
+  <!-- MÀN HÌNH HƯỚNG DẪN KHI MỞ NGOÀI TELEGRAM (HOẶC MỞ QUA LINK WEB THƯỜNG) -->
   <div class="container" id="auth-guide-screen" style="display: none;">
     <div class="card" style="text-align: center; padding: 35px 20px; border-color: var(--fuel);">
-      <div style="font-size: 50px; margin-bottom: 15px;">≡ƒñû</div>
-      <h2 style="font-size: 18px; color: var(--fuel); margin-bottom: 12px; font-weight: 800;">VUI L├ÆNG Mß╗₧ QUA TELEGRAM BOT</h2>
+      <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
+      <h2 style="font-size: 18px; color: var(--fuel); margin-bottom: 12px; font-weight: 800;">VUI LÒNG MỞ QUA TELEGRAM BOT</h2>
       <p style="font-size: 13px; color: #ccc; line-height: 1.6; margin-bottom: 20px;">
-        Bß║ín ─æang truy cß║¡p qua tr├¼nh duyß╗çt th├┤ng th╞░ß╗¥ng hoß║╖c mß╗ƒ li├¬n kß║┐t ngo├ái.<br><br>
-        ─Éß╗â t├ái khoß║ún ─æ╞░ß╗úc nhß║¡n dß║íng bß║úo mß║¡t v├á sß╗æ d╞░ tß╗▒ ─æß╗Öng t─âng thß╗Ñ ─æß╗Öng 24/7, vui l├▓ng mß╗ƒ game b├¬n trong <b>Telegram Bot</b>!
+        Bạn đang truy cập qua trình duyệt thông thường hoặc mở liên kết ngoài.<br><br>
+        Để tài khoản được nhận dạng bảo mật và số dư tự động tăng thụ động 24/7, vui lòng mở game bên trong <b>Telegram Bot</b>!
       </p>
       <a href="https://t.me/mayintien2026_bot/play" target="_blank" class="btn btn-primary" style="margin-bottom: 15px; text-decoration: none; display: block; font-size: 15px;">
-        ΓÜí Mß╗₧ GAME TR├èN TELEGRAM BOT ΓÜí
+        ⚡ MỞ GAME TRÊN TELEGRAM BOT ⚡
       </a>
       <div style="margin-top: 20px;">
         <button onclick="promptAdminLoginWeb()" style="background: none; border: none; color: #777; font-size: 12px; cursor: pointer; text-decoration: underline;">
-          ≡ƒöÉ D├ánh ri├¬ng cho Chß╗º Game (─É─âng nhß║¡p Quß║ún Trß╗ï tr├¬n Web)
+          🔐 Dành riêng cho Chủ Game (Đăng nhập Quản Trị trên Web)
         </button>
       </div>
     </div>
   </div>
 
-  <!-- M├ÇN H├îNH Bß║óO TR├î Hß╗å THß╗ÉNG -->
+  <!-- MÀN HÌNH BẢO TRÌ HỆ THỐNG -->
   <div class="container" id="maintenance-screen" style="display: none;">
     <div class="card" style="text-align: center; padding: 45px 20px; border-color: var(--fuel); box-shadow: 0 0 25px rgba(255,170,0,0.2);">
-      <div style="font-size: 55px; margin-bottom: 16px; animation: bounce 1.2s infinite alternate;">ΓÜÖ∩╕Å</div>
-      <h2 style="font-size: 20px; color: var(--fuel); margin-bottom: 12px; font-weight: 800; letter-spacing: 0.5px;">Hß╗å THß╗ÉNG ─ÉANG Bß║óO TR├î</h2>
+      <div style="font-size: 55px; margin-bottom: 16px; animation: bounce 1.2s infinite alternate;">⚙️</div>
+      <h2 style="font-size: 20px; color: var(--fuel); margin-bottom: 12px; font-weight: 800; letter-spacing: 0.5px;">HỆ THỐNG ĐANG BẢO TRÌ</h2>
       <p style="font-size: 13px; color: #ccc; line-height: 1.6; margin-bottom: 20px;">
-        M├íy in tiß╗ün ─æang ─æ╞░ß╗úc tß║ím dß╗½ng ─æß╗â bß║úo tr├¼ ─æß╗ïnh kß╗│, n├óng cß║Ñp m├íy chß╗º v├á tß╗æi ╞░u h├│a hß╗ç thß╗æng kiß║┐m tiß╗ün.<br><br>
-        ≡ƒöÆ <strong style="color: #fff;">To├án bß╗Ö sß╗æ d╞░, t├ái khoß║ún v├á thß╗¥i gian cß╗ºa bß║ín ─æ╞░ß╗úc bß║úo to├án an to├án 100%.</strong>
+        Máy in tiền đang được tạm dừng để bảo trì định kỳ, nâng cấp máy chủ và tối ưu hóa hệ thống kiếm tiền.<br><br>
+        🔒 <strong style="color: #fff;">Toàn bộ số dư, tài khoản và thời gian của bạn được bảo toàn an toàn 100%.</strong>
       </p>
       <div style="background: rgba(255, 170, 0, 0.12); border: 1px dashed var(--fuel); border-radius: 10px; padding: 12px; font-size: 12px; color: #ffcc66; line-height: 1.5;">
-        ΓÅ│ Vui l├▓ng quay lß║íi sau ├¡t ph├║t. Trang sß║╜ tß╗▒ ─æß╗Öng kß║┐t nß╗æi lß║íi khi bß║úo tr├¼ ho├án tß║Ñt!
+        ⏳ Vui lòng quay lại sau ít phút. Trang sẽ tự động kết nối lại khi bảo trì hoàn tất!
       </div>
       <div style="margin-top: 25px;">
         <button onclick="promptAdminLogin()" style="background: none; border: none; color: #555; font-size: 11px; cursor: pointer; text-decoration: underline;">
-          ≡ƒöÉ D├ánh ri├¬ng cho Chß╗º Game (─É─âng nhß║¡p Quß║ún Trß╗ï)
+          🔐 Dành riêng cho Chủ Game (Đăng nhập Quản Trị)
         </button>
       </div>
     </div>
   </div>
 
-  <!-- M├ÇN H├îNH ─ÉIß╗ÇU PHß╗ÉI QUß║óNG C├üO 2 B╞»ß╗ÜC Nß╗ÿI Bß╗ÿ -->
+  <!-- MÀN HÌNH ĐIỀU PHỐI QUẢNG CÁO 2 BƯỚC NỘI BỘ -->
   <div id="ad-overlay-screen">
     <div class="ad-overlay-card">
-      <div class="ad-anim-icon" id="ad-status-icon">≡ƒô║</div>
-      <h3 id="ad-status-title" style="font-size: 18px; color: var(--accent); margin-bottom: 8px;">─Éang kß║┐t nß╗æi quß║úng c├ío...</h3>
+      <div class="ad-anim-icon" id="ad-status-icon">📺</div>
+      <h3 id="ad-status-title" style="font-size: 18px; color: var(--accent); margin-bottom: 8px;">Đang kết nối quảng cáo...</h3>
       <p id="ad-status-desc" style="font-size: 13px; color: #aaa; margin-bottom: 20px; line-height: 1.5;">
-        Vui l├▓ng xem hß║┐t video ─æß╗â hß╗ç thß╗æng ghi nhß║¡n th╞░ß╗ƒng v├áo v├¡ cß╗ºa bß║ín.
+        Vui lòng xem hết video để hệ thống ghi nhận thưởng vào ví của bạn.
       </p>
       
-      <!-- N├ÜT XEM TIß║╛P QC 2 (Hß╗û TRß╗ó AUTO CLICKER) -->
+      <!-- NÚT XEM TIẾP QC 2 (HỖ TRỢ AUTO CLICKER) -->
       <button id="btn-next-step-ad" class="btn btn-gold" style="display: none;" onclick="playSecondMonetagAd()">
-        ΓÅ⌐ Bß║ñM XEM TIß║╛P QUß║óNG C├üO (2/2)
+        ⏩ BẤM XEM TIẾP QUẢNG CÁO (2/2)
       </button>
 
       <button id="btn-cancel-ad" style="background: none; border: none; color: #666; font-size: 12px; margin-top: 15px; cursor: pointer;" onclick="cancelAdModal()">
-        ─É├│ng cß╗¡a sß╗ò n├áy
+        Đóng cửa sổ này
       </button>
     </div>
   </div>
 
-  <!-- M├ÇN H├îNH Bß╗è KH├ôA (KHI D├ÖNG NICK KH├üC TR├èN C├ÖNG M├üY) -->
+  <!-- MÀN HÌNH BỊ KHÓA (KHI DÙNG NICK KHÁC TRÊN CÙNG MÁY) -->
   <div class="container" id="blocked-screen">
     <div class="blocked-card">
-      <div class="blocked-icon">Γ¢ö</div>
-      <div class="blocked-title">TRUY Cß║¼P Bß╗è Tß╗¬ CHß╗ÉI</div>
-      <div class="blocked-desc" id="blocked-msg">Thiß║┐t bß╗ï n├áy ─æ├ú li├¬n kß║┐t vß╗¢i t├ái khoß║ún kh├íc.</div>
+      <div class="blocked-icon">⛔</div>
+      <div class="blocked-title">TRUY CẬP BỊ TỪ CHỐI</div>
+      <div class="blocked-desc" id="blocked-msg">Thiết bị này đã liên kết với tài khoản khác.</div>
     </div>
   </div>
 
-  <!-- M├ÇN H├îNH ─É─éNG K├¥ T├ÇI KHOß║óN Mß╗ÜI -->
+  <!-- MÀN HÌNH ĐĂNG KÝ TÀI KHOẢN MỚI -->
   <div class="container" id="register-screen">
     <div class="card">
-      <div class="card-title">Khß╗ƒi Tß║ío T├ái Khoß║ún Lß║ºn ─Éß║ºu</div>
-      <p style="font-size: 13px; color: var(--subtext); margin-bottom: 16px;">Mß╗ùi thiß║┐t bß╗ï chß╗ë ─æ╞░ß╗úc ph├⌐p ─æ─âng k├╜ duy nhß║Ñt 1 t├ái khoß║ún.</p>
+      <div class="card-title">Khởi Tạo Tài Khoản Lần Đầu</div>
+      <p style="font-size: 13px; color: var(--subtext); margin-bottom: 16px;">Mỗi thiết bị chỉ được phép đăng ký duy nhất 1 tài khoản.</p>
       
       <div class="form-group">
-        <label>T├¬n t├ái khoß║ún trong game:</label>
-        <input type="text" id="reg-username" class="form-control" placeholder="V├¡ dß╗Ñ: HoangNam2026">
+        <label>Tên tài khoản trong game:</label>
+        <input type="text" id="reg-username" class="form-control" placeholder="Ví dụ: HoangNam2026">
       </div>
       <div class="form-group">
-        <label>M├ú PIN bß║úo mß║¡t r├║t tiß╗ün (4-6 sß╗æ):</label>
+        <label>Mã PIN bảo mật rút tiền (4-6 số):</label>
         <input type="password" id="reg-pin" class="form-control" placeholder="****" maxlength="6">
       </div>
-      <button class="btn btn-green" onclick="handleRegister()">─É─éNG K├¥ & Bß║¼T M├üY IN</button>
+      <button class="btn btn-green" onclick="handleRegister()">ĐĂNG KÝ & BẬT MÁY IN</button>
     </div>
   </div>
 
-  <!-- Nß╗ÿI DUNG CH├ìNH Cß╗ªA GAME -->
+  <!-- NỘI DUNG CHÍNH CỦA GAME -->
   <div id="main-content" style="display: none;">
     <div class="header">
-      <h1>ΓÜí M├üY IN TIß╗ÇN VN─É</h1>
-      <div class="user-info" id="user-display">≡ƒæñ T├ái khoß║ún: ...</div>
+      <h1>⚡ MÁY IN TIỀN VNĐ</h1>
+      <div class="user-info" id="user-display">👤 Tài khoản: ...</div>
     </div>
 
-    <!-- TAB 1: M├üY IN TIß╗ÇN -->
+    <!-- TAB 1: MÁY IN TIỀN -->
     <div class="container" id="tab-mining">
       <div class="card balance-box">
-        <div class="card-title">Sß╗æ D╞░ Khß║ú Dß╗Ñng (VN─É)</div>
-        <div class="balance-val" id="bal-amount">0.00 VN─É</div>
-        <div class="balance-rate">Tß╗æc ─æß╗Ö in: <strong>0.01 VN─É / gi├óy</strong> (864 VN─É/ng├áy)</div>
+        <div class="card-title">Số Dư Khả Dụng (VNĐ)</div>
+        <div class="balance-val" id="bal-amount">0.00 VNĐ</div>
+        <div class="balance-rate">Tốc độ in: <strong>0.01 VNĐ / giây</strong> (864 VNĐ/ngày)</div>
       </div>
 
       <div class="card">
-        <div class="card-title">Trß║íng Th├íi B├¼nh Nhi├¬n Liß╗çu</div>
+        <div class="card-title">Trạng Thái Bình Nhiên Liệu</div>
         <div class="fuel-box">
           <div>
-            <div style="font-size: 12px; color: var(--subtext);">Thß╗¥i gian m├íy tß╗▒ chß║íy c├▓n:</div>
+            <div style="font-size: 12px; color: var(--subtext);">Thời gian máy tự chạy còn:</div>
             <div class="fuel-timer" id="fuel-countdown">00:00:00</div>
           </div>
-          <div id="machine-status" style="font-size: 12px; font-weight: bold; color: var(--danger);">─É├â Tß║«T M├üY</div>
+          <div id="machine-status" style="font-size: 12px; font-weight: bold; color: var(--danger);">ĐÃ TẮT MÁY</div>
         </div>
       </div>
 
-      <!-- THß╗ÉNG K├è QUß║óNG C├üO NG╞»ß╗£I CH╞áI ─É├â XEM (MINH Bß║áCH & CHß╗ÉNG GIAN Lß║¼N) -->
+      <!-- THỐNG KÊ QUẢNG CÁO NGƯỜI CHƠI ĐÃ XEM (MINH BẠCH & CHỐNG GIAN LẬN) -->
       <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-color: rgba(0, 255, 136, 0.3);">
         <div>
-          <div style="font-size: 12px; color: var(--subtext);">Tß╗òng Quß║úng C├ío Bß║ín ─É├ú Xem:</div>
+          <div style="font-size: 12px; color: var(--subtext);">Tổng Quảng Cáo Bạn Đã Xem:</div>
           <div style="font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 2px;">
-            <span id="player-ads-count">0</span> <span style="font-size: 12px; font-weight: normal; color: #888;">l╞░ß╗út hß╗úp lß╗ç</span>
+            <span id="player-ads-count">0</span> <span style="font-size: 12px; font-weight: normal; color: #888;">lượt hợp lệ</span>
           </div>
         </div>
-        <div style="font-size: 32px;">≡ƒô║</div>
+        <div style="font-size: 32px;">📺</div>
       </div>
 
       <div class="card">
-        <div class="card-title">Nß║íp Nhi├¬n Liß╗çu & C├áy Tiß╗ün Mß║╖t</div>
+        <div class="card-title">Nạp Nhiên Liệu & Cày Tiền Mặt</div>
         <button class="btn btn-gold" onclick="startMonetagAdFlow('FUEL')" style="margin-bottom: 10px;">
-          Γ¢╜ XEM QUß║óNG C├üO (+10 PH├ÜT NHI├èN LIß╗åU)
+          ⛽ XEM QUẢNG CÁO (+10 PHÚT NHIÊN LIỆU)
         </button>
         <button class="btn btn-green" onclick="startMonetagAdFlow('CASH')">
-          ≡ƒÆ╡ XEM QUß║óNG C├üO (+2.00 VN─É TIß╗ÇN T╞»╞áI)
+          💵 XEM QUẢNG CÁO (+2.00 VNĐ TIỀN TƯƠI)
         </button>
 
         <div class="hint-box">
-          ≡ƒÆí <strong>Mß║╕O Cß╗░C HAY CHO Bß║áN:</strong> H├úy tß║úi ß╗⌐ng dß╗Ñng <strong>Auto Clicker</strong> tr├¬n ─æiß╗çn thoß║íi, c├ái ─æß║╖t tß╗▒ ─æß╗Öng bß║Ñm v├áo n├║t xem quß║úng c├ío ─æß╗â treo m├íy 24/24 rß║únh tay kiß║┐m tiß╗ün li├¬n tß╗Ñc cß║ú ng├áy lß║½n ─æ├¬m!
+          💡 <strong>MẸO CỰC HAY CHO BẠN:</strong> Hãy tải ứng dụng <strong>Auto Clicker</strong> trên điện thoại, cài đặt tự động bấm vào nút xem quảng cáo để treo máy 24/24 rảnh tay kiếm tiền liên tục cả ngày lẫn đêm!
         </div>
       </div>
     </div>
 
-    <!-- TAB 2: GIß╗ÜI THIß╗åU Bß║áN B├ê -->
+    <!-- TAB 2: GIỚI THIỆU BẠN BÈ -->
     <div class="container" id="tab-referral" style="display: none;">
       <div class="card">
-        <div class="card-title">Sß╗▒ Kiß╗çn Giß╗¢i Thiß╗çu Bß║ín B├ê</div>
+        <div class="card-title">Sự Kiện Giới Thiệu Bạn BÈ</div>
         <p style="font-size: 13px; color: #ccc; line-height: 1.5; margin-bottom: 12px;">
-          Mß╗¥i bß║ín b├¿ c├╣ng tham gia kiß║┐m tiß╗ün. Khi 1 ng╞░ß╗¥i bß║ín xem ─æß╗º <strong>5.000 quß║úng c├ío</strong>, Admin sß║╜ nhß║¡n ─æ╞░ß╗úc th├┤ng b├ío v├á chuyß╗ân ngay <strong>10.000 VN─É tiß╗ün mß║╖t</strong> cho bß║ín!
+          Mời bạn bè cùng tham gia kiếm tiền. Khi 1 người bạn xem đủ <strong>5.000 quảng cáo</strong>, Admin sẽ nhận được thông báo và chuyển ngay <strong>10.000 VNĐ tiền mặt</strong> cho bạn!
         </p>
         <div class="form-group">
-          <label>Link giß╗¢i thiß╗çu cß╗ºa bß║ín:</label>
+          <label>Link giới thiệu của bạn:</label>
           <input type="text" id="ref-link-input" class="form-control" readonly onclick="this.select();">
         </div>
-        <button class="btn btn-green" onclick="copyRefLink()">Sao Ch├⌐p Link Mß╗¥i</button>
+        <button class="btn btn-green" onclick="copyRefLink()">Sao Chép Link Mời</button>
       </div>
 
       <div class="card">
-        <div class="card-title">Danh S├ích Bß║ín B├¿ ─É├ú Mß╗¥i (<span id="friends-count">0</span>)</div>
+        <div class="card-title">Danh Sách Bạn Bè Đã Mời (<span id="friends-count">0</span>)</div>
         <div id="friends-list-container">
-          <p style="font-size: 12px; color: var(--subtext); text-align: center; padding: 10px;">Ch╞░a c├│ bß║ín b├¿ n├áo tham gia qua link cß╗ºa bß║ín.</p>
+          <p style="font-size: 12px; color: var(--subtext); text-align: center; padding: 10px;">Chưa có bạn bè nào tham gia qua link của bạn.</p>
         </div>
       </div>
     </div>
 
-    <!-- TAB 3: ─Éß╗öI TH╞»ß╗₧NG / R├ÜT TIß╗ÇN -->
+    <!-- TAB 3: ĐỔI THƯỞNG / RÚT TIỀN -->
     <div class="container" id="tab-withdraw" style="display: none;">
       <div class="card">
-        <div class="card-title">R├║t Tiß╗ün Vß╗ü T├ái Khoß║ún</div>
+        <div class="card-title">Rút Tiền Về Tài Khoản</div>
         <p style="font-size: 12px; color: var(--subtext); margin-bottom: 14px;">
-          Hß║ín mß╗⌐c r├║t tß╗æi thiß╗âu: <strong style="color: var(--accent);">5.000 VN─É</strong>. Tiß╗ün sß║╜ ─æ╞░ß╗úc trß╗½ ngay lß║¡p tß╗⌐c khi tß║ío lß╗çnh.
+          Hạn mức rút tối thiểu: <strong style="color: var(--accent);">5.000 VNĐ</strong>. Tiền sẽ được trừ ngay lập tức khi tạo lệnh.
         </p>
 
         <div class="form-group">
-          <label>Sß╗æ tiß╗ün muß╗æn r├║t (VN─É):</label>
-          <input type="number" id="wd-amount" class="form-control" placeholder="Tß╗æi thiß╗âu 5000" min="5000">
-          <div style="font-size: 11px; color: var(--subtext); margin-top: 4px;">Khß║ú dß╗Ñng: <span id="withdraw-available-bal" style="color: #fff;">0.00 VN─É</span></div>
+          <label>Số tiền muốn rút (VNĐ):</label>
+          <input type="number" id="wd-amount" class="form-control" placeholder="Tối thiểu 5000" min="5000">
+          <div style="font-size: 11px; color: var(--subtext); margin-top: 4px;">Khả dụng: <span id="withdraw-available-bal" style="color: #fff;">0.00 VNĐ</span></div>
         </div>
 
         <div class="form-group">
-          <label>Ph╞░╞íng thß╗⌐c nhß║¡n tiß╗ün:</label>
+          <label>Phương thức nhận tiền:</label>
           <select id="wd-method" class="form-control" onchange="toggleBankSelect()">
-            <option value="MOMO">V├¡ MoMo</option>
-            <option value="ZALOPAY">V├¡ ZaloPay</option>
-            <option value="NGAN_HANG">Tß║Ñt cß║ú Ng├ón h├áng Viß╗çt Nam</option>
+            <option value="MOMO">Ví MoMo</option>
+            <option value="ZALOPAY">Ví ZaloPay</option>
+            <option value="NGAN_HANG">Tất cả Ngân hàng Việt Nam</option>
           </select>
         </div>
 
         <div class="form-group" id="bank-select-group" style="display: none;">
-          <label>Chß╗ìn Ng├ón H├áng:</label>
+          <label>Chọn Ngân Hàng:</label>
           <select id="wd-bank-name" class="form-control">
-            <option value="MBBANK">MB Bank (Qu├ón ─Éß╗Öi)</option>
+            <option value="MBBANK">MB Bank (Quân Đội)</option>
             <option value="VIETCOMBANK">Vietcombank</option>
             <option value="TECHCOMBANK">Techcombank</option>
             <option value="VPBANK">VPBank</option>
@@ -319,85 +319,85 @@
             <option value="TPBANK">TPBank</option>
             <option value="VIB">VIB</option>
             <option value="SACOMBANK">Sacombank</option>
-            <option value="KHAC">Ng├ón h├áng kh├íc</option>
+            <option value="KHAC">Ngân hàng khác</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label id="account-label">Sß╗æ ─æiß╗çn thoß║íi V├¡ MoMo:</label>
-          <input type="text" id="wd-account-number" class="form-control" placeholder="Nhß║¡p sß╗æ ─æiß╗çn thoß║íi / STK">
+          <label id="account-label">Số điện thoại Ví MoMo:</label>
+          <input type="text" id="wd-account-number" class="form-control" placeholder="Nhập số điện thoại / STK">
         </div>
 
         <div class="form-group">
-          <label>Hß╗ì v├á t├¬n chß╗º t├ái khoß║ún (Viß║┐t hoa kh├┤ng dß║Ñu):</label>
+          <label>Họ và tên chủ tài khoản (Viết hoa không dấu):</label>
           <input type="text" id="wd-account-name" class="form-control" placeholder="NGUYEN VAN A">
         </div>
 
         <div class="form-group">
-          <label>M├ú PIN bß║úo mß║¡t:</label>
-          <input type="password" id="wd-pin" class="form-control" placeholder="Nhß║¡p m├ú PIN l├║c ─æ─âng k├╜" maxlength="6">
+          <label>Mã PIN bảo mật:</label>
+          <input type="password" id="wd-pin" class="form-control" placeholder="Nhập mã PIN lúc đăng ký" maxlength="6">
         </div>
 
-        <button class="btn btn-green" onclick="handleWithdraw()">X├üC NHß║¼N R├ÜT TIß╗ÇN NGAY</button>
+        <button class="btn btn-green" onclick="handleWithdraw()">XÁC NHẬN RÚT TIỀN NGAY</button>
       </div>
     </div>
 
-    <!-- TAB 4: ADMIN QUß║óN TRß╗è (CHß╗ê ADMIN THß║ñY) -->
+    <!-- TAB 4: ADMIN QUẢN TRỊ (CHỈ ADMIN THẤY) -->
     <div class="container" id="tab-admin" style="display: none;">
-      <!-- KHß╗ÉI Bß║¼T/Tß║«T Bß║óO TR├î Hß╗å THß╗ÉNG -->
+      <!-- KHỐI BẬT/TẮT BẢO TRÌ HỆ THỐNG -->
       <div class="card" style="border: 2px solid var(--accent); background: #1a1e28;">
-        <div class="card-title" style="color: var(--accent); font-weight: bold;">ΓÜÖ∩╕Å C├öNG Tß║«C Bß║óO TR├î TO├ÇN Hß╗å THß╗ÉNG</div>
+        <div class="card-title" style="color: var(--accent); font-weight: bold;">⚙️ CÔNG TẮC BẢO TRÌ TOÀN HỆ THỐNG</div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0;">
           <div>
-            <div style="font-size: 12px; color: var(--subtext);">Trß║íng th├íi hiß╗çn tß║íi:</div>
-            <div id="maint-status-display" style="font-size: 16px; font-weight: bold; color: var(--fuel);">─Éang kiß╗âm tra...</div>
+            <div style="font-size: 12px; color: var(--subtext);">Trạng thái hiện tại:</div>
+            <div id="maint-status-display" style="font-size: 16px; font-weight: bold; color: var(--fuel);">Đang kiểm tra...</div>
           </div>
           <button id="btn-toggle-maint" class="btn" style="width: auto; padding: 10px 18px; margin: 0; font-size: 13px;" onclick="handleToggleMaintFromApp()">
-            ≡ƒöä ─Éang tß║úi...
+            🔄 Đang tải...
           </button>
         </div>
         <p style="font-size: 11px; color: #888; line-height: 1.4;">
-          ≡ƒÆí <strong>Quyß╗ün ri├¬ng t╞░:</strong> Khß╗æi n├áy chß╗ë hiß╗ân thß╗ï duy nhß║Ñt tr├¬n m├íy cß╗ºa Admin. Khi bß║ín bß║Ñm Bß║¡t/Tß║»t, to├án bß╗Ö ng╞░ß╗¥i ch╞íi sß║╜ tß╗▒ ─æß╗Öng nhß║¡n lß╗çnh trong 15 gi├óy m├á kh├┤ng cß║ºn bß║ín sß╗¡a code!
+          💡 <strong>Quyền riêng tư:</strong> Khối này chỉ hiển thị duy nhất trên máy của Admin. Khi bạn bấm Bật/Tắt, toàn bộ người chơi sẽ tự động nhận lệnh trong 15 giây mà không cần bạn sửa code!
         </p>
       </div>
 
       <div class="card">
-        <div class="card-title" style="color: var(--fuel);">≡ƒææ Bß║úng ─Éiß╗üu Khiß╗ân Admin (Chi Tiß║┐t ─É╞ín ─Éß╗òi Th╞░ß╗ƒng)</div>
+        <div class="card-title" style="color: var(--fuel);">👑 Bảng Điều Khiển Admin (Chi Tiết Đơn Đổi Thưởng)</div>
         <div id="admin-orders-container">
-          <p style="font-size: 12px; color: var(--subtext); text-align: center;">─Éang tß║úi danh s├ích...</p>
+          <p style="font-size: 12px; color: var(--subtext); text-align: center;">Đang tải danh sách...</p>
         </div>
       </div>
 
-      <!-- KHß╗ÉI QUß║óN L├¥ NG╞»ß╗£I CH╞áI & L╞»ß╗óT XEM QC ─Éß╗é CHß╗ÉNG GIAN Lß║¼N -->
+      <!-- KHỐI QUẢN LÝ NGƯỜI CHƠI & LƯỢT XEM QC ĐỂ CHỐNG GIAN LẬN -->
       <div class="card" style="border: 1px solid var(--border);">
-        <div class="card-title" style="color: var(--primary);">≡ƒæÑ THß╗ÉNG K├è NG╞»ß╗£I CH╞áI & L╞»ß╗óT XEM QC (CHß╗ÉNG GIAN Lß║¼N)</div>
+        <div class="card-title" style="color: var(--primary);">👥 THỐNG KÊ NGƯỜI CHƠI & LƯỢT XEM QC (CHỐNG GIAN LẬN)</div>
         <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--subtext); margin-bottom: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px;">
-          <span>Tß╗òng ng╞░ß╗¥i ch╞íi: <strong id="admin-total-users" style="color: #fff;">0</strong></span>
-          <span>Tß╗òng QC xem to├án app: <strong id="admin-total-ads" style="color: var(--primary);">0</strong></span>
+          <span>Tổng người chơi: <strong id="admin-total-users" style="color: #fff;">0</strong></span>
+          <span>Tổng QC xem toàn app: <strong id="admin-total-ads" style="color: var(--primary);">0</strong></span>
         </div>
         <div id="admin-users-list" style="max-height: 260px; overflow-y: auto;">
-          <p style="font-size: 12px; color: var(--subtext); text-align: center;">─Éang tß║úi danh s├ích ng╞░ß╗¥i ch╞íi...</p>
+          <p style="font-size: 12px; color: var(--subtext); text-align: center;">Đang tải danh sách người chơi...</p>
         </div>
       </div>
     </div>
 
-    <!-- THANH MENU ─ÉIß╗ÇU H╞»ß╗ÜNG D╞»ß╗ÜI C├ÖNG -->
+    <!-- THANH MENU ĐIỀU HƯỚNG DƯỚI CÙNG -->
     <div class="tabs-bar">
       <div class="tab-item active" id="tab-btn-1" onclick="switchTab(1)">
-        <span>ΓÜí</span>
-        M├íy In
+        <span>⚡</span>
+        Máy In
       </div>
       <div class="tab-item" id="tab-btn-2" onclick="switchTab(2)">
-        <span>≡ƒæÑ</span>
-        Bß║ín B├¿
+        <span>👥</span>
+        Bạn Bè
       </div>
       <div class="tab-item" id="tab-btn-3" onclick="switchTab(3)">
-        <span>≡ƒÆ│</span>
-        R├║t Tiß╗ün
+        <span>💳</span>
+        Rút Tiền
       </div>
       <div class="tab-item" id="tab-btn-4" style="display: none;" onclick="switchTab(4)">
-        <span>≡ƒææ</span>
-        Quß║ún Trß╗ï
+        <span>👑</span>
+        Quản Trị
       </div>
     </div>
   </div>
@@ -411,7 +411,7 @@
       }
     } catch(e) {}
 
-    // === Bß╗ÿ NHß║¼N DIß╗åN THIß║╛T Bß╗è ─Éß╗ÿC QUYß╗ÇN (CHß╗ÉNG TR├ÖNG Lß║╢P M├üY KH├üC, KH├ôA CHß║╢T 1 M├üY = 1 T├ÇI KHOß║óN) ===
+    // === BỘ NHẬN DIỆN THIẾT BỊ ĐỘC QUYỀN (CHỐNG TRÙNG LẶP MÁY KHÁC, KHÓA CHẶT 1 MÁY = 1 TÀI KHOẢN) ===
     function getUniqueDeviceId() {
       let devId = null;
       try {
@@ -455,7 +455,7 @@
     let hasLoadedData = false;
     let isRestoringSession = false;
 
-    // Bß╗Ö tho├ít an to├án chß╗æng treo xoay m├án h├¼nh qu├í 4.5 gi├óy
+    // Bộ thoát an toàn chống treo xoay màn hình quá 4.5 giây
     setTimeout(() => {
       if (!hasLoadedData) {
         const loadingEl = document.getElementById('loading-screen');
@@ -477,7 +477,7 @@
     let isCurrentMaintenanceOn = false;
 
     function formatVND(amount) {
-      return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VN─É';
+      return amount.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' VNĐ';
     }
 
     function getTgUserId() {
@@ -487,7 +487,7 @@
       return 'user_common';
     }
 
-    // L╞»U PHI├èN ─É─éNG NHß║¼P V─¿NH VIß╗äN THEO ─É├ÜNG T├ÇI KHOß║óN TELEGRAM
+    // LƯU PHIÊN ĐĂNG NHẬP VĨNH VIỄN THEO ĐÚNG TÀI KHOẢN TELEGRAM
     function savePersistentSession(userData) {
       const key = 'saved_session_' + getTgUserId();
       try { localStorage.setItem(key, JSON.stringify(userData)); } catch (e) {}
@@ -544,14 +544,14 @@
 
       if (method === 'NGAN_HANG') {
         bankGroup.style.display = 'block';
-        label.innerText = 'Sß╗æ t├ái khoß║ún ng├ón h├áng:';
+        label.innerText = 'Số tài khoản ngân hàng:';
       } else {
         bankGroup.style.display = 'none';
-        label.innerText = method === 'MOMO' ? 'Sß╗æ ─æiß╗çn thoß║íi V├¡ MoMo:' : 'Sß╗æ ─æiß╗çn thoß║íi V├¡ ZaloPay:';
+        label.innerText = method === 'MOMO' ? 'Số điện thoại Ví MoMo:' : 'Số điện thoại Ví ZaloPay:';
       }
     }
 
-    // Tß╗░ ─Éß╗ÿNG ─É─éNG NHß║¼P V├Ç ─Éß╗ÆNG Bß╗ÿ Dß╗« LIß╗åU
+    // TỰ ĐỘNG ĐĂNG NHẬP VÀ ĐỒNG BỘ DỮ LIỆU
     async function loadData() {
       const loadingEl = document.getElementById('loading-screen');
       const hideLoading = () => { 
@@ -570,7 +570,7 @@
           })
         });
 
-        // Nß║╛U KH├öNG C├ô initData HOß║╢C X├üC THß╗░C THß║ñT Bß║áI (Mß╗₧ Tß╗¬ LINK WEB NGO├ÇI)
+        // NẾU KHÔNG CÓ initData HOẶC XÁC THỰC THẤT BẠI (MỞ TỪ LINK WEB NGOÀI)
         if (!res.ok) {
           hideLoading();
           document.getElementById('auth-guide-screen').style.display = 'block';
@@ -584,7 +584,7 @@
         const data = await res.json();
         hideLoading();
 
-        // Nß║╛U Hß╗å THß╗ÉNG ─ÉANG Bß║óO TR├î
+        // NẾU HỆ THỐNG ĐANG BẢO TRÌ
         if (data.maintenance) {
           document.getElementById('maintenance-screen').style.display = 'block';
           document.getElementById('blocked-screen').style.display = 'none';
@@ -593,7 +593,7 @@
           return;
         }
 
-        // Nß║╛U PH├üT HIß╗åN D├ÖNG T├ÇI KHOß║óN KH├üC TR├èN C├ÖNG M├üY PHß║ªN Cß╗¿NG N├ÇY
+        // NẾU PHÁT HIỆN DÙNG TÀI KHOẢN KHÁC TRÊN CÙNG MÁY PHẦN CỨNG NÀY
         if (data.device_blocked) {
           document.getElementById('blocked-screen').style.display = 'block';
           document.getElementById('blocked-msg').innerText = data.error;
@@ -625,11 +625,11 @@
               document.getElementById('main-content').style.display = 'none';
             }
           } else {
-            // ─É├â ─É─éNG NHß║¼P TH├ÇNH C├öNG -> V├ÇO THß║▓NG GAME
+            // ĐÃ ĐĂNG NHẬP THÀNH CÔNG -> VÀO THẲNG GAME
             document.getElementById('maintenance-screen').style.display = 'none';
             document.getElementById('register-screen').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
-            document.getElementById('user-display').innerText = '≡ƒæñ T├ái khoß║ún: ' + data.user.username;
+            document.getElementById('user-display').innerText = '👤 Tài khoản: ' + data.user.username;
             if (document.getElementById('player-ads-count')) {
               document.getElementById('player-ads-count').innerText = data.user.ads_watched || 0;
             }
@@ -672,7 +672,7 @@
     }
 
     async function promptAdminLoginWeb() {
-      const pin = prompt('Nhß║¡p m├ú bß║úo mß║¡t Quß║ún trß╗ï vi├¬n (PIN):');
+      const pin = prompt('Nhập mã bảo mật Quản trị viên (PIN):');
       if (!pin) return;
       try {
         const res = await fetch('/api/admin/web-login', {
@@ -682,7 +682,7 @@
         });
         const data = await res.json();
         if (data.success) {
-          alert('Γ£à ─É─âng nhß║¡p Quß║ún trß╗ï vi├¬n Web th├ánh c├┤ng!');
+          alert('✅ Đăng nhập Quản trị viên Web thành công!');
           document.getElementById('auth-guide-screen').style.display = 'none';
           document.getElementById('main-content').style.display = 'block';
           document.getElementById('tab-btn-4').style.display = 'flex';
@@ -690,15 +690,15 @@
           switchTab(4);
           loadAdminData();
         } else {
-          alert('Γ¥î ' + (data.error || 'M├ú bß║úo mß║¡t kh├┤ng ─æ├║ng!'));
+          alert('❌ ' + (data.error || 'Mã bảo mật không đúng!'));
         }
       } catch (e) {
-        alert('Lß╗ùi kß║┐t nß╗æi: ' + e.message);
+        alert('Lỗi kết nối: ' + e.message);
       }
     }
 
     async function promptAdminLogin() {
-      const secret = prompt("Nhß║¡p m├ú bß║úo mß║¡t Quß║ún trß╗ï vi├¬n (Mß║╖c ─æß╗ïnh: mysecret123 hoß║╖c 1234):");
+      const secret = prompt("Nhập mã bảo mật Quản trị viên (Mặc định: mysecret123 hoặc 1234):");
       if (!secret) return;
 
       try {
@@ -709,17 +709,17 @@
         });
         const data = await res.json();
         if (data.success) {
-          alert("≡ƒÄë " + data.message + "\nGame sß║╜ mß╗ƒ ra ngay b├óy giß╗¥!");
+          alert("🎉 " + data.message + "\nGame sẽ mở ra ngay bây giờ!");
           loadData();
         } else {
-          alert(data.error || "M├ú bß║úo mß║¡t kh├┤ng ─æ├║ng!");
+          alert(data.error || "Mã bảo mật không đúng!");
         }
       } catch (e) {
-        alert("Lß╗ùi kß║┐t nß╗æi m├íy chß╗º!");
+        alert("Lỗi kết nối máy chủ!");
       }
     }
 
-    // ADMIN XEM ─É╞áN R├ÜT
+    // ADMIN XEM ĐƠN RÚT
     async function loadAdminOrders() {
       const container = document.getElementById('admin-orders-container');
       const usersContainer = document.getElementById('admin-users-list');
@@ -735,55 +735,55 @@
             updateMaintUI(data.is_maintenance);
           }
 
-          // Cß║¼P NHß║¼T Tß╗öNG QUAN
+          // CẬP NHẬT TỔNG QUAN
           if (document.getElementById('admin-total-users')) {
             document.getElementById('admin-total-users').innerText = data.total_users || 0;
           }
           if (document.getElementById('admin-total-ads')) {
-            document.getElementById('admin-total-ads').innerText = (data.total_ads_watched || 0).toLocaleString('vi-VN') + ' l╞░ß╗út';
+            document.getElementById('admin-total-ads').innerText = (data.total_ads_watched || 0).toLocaleString('vi-VN') + ' lượt';
           }
 
-          // RENDER DANH S├üCH ─É╞áN R├ÜT (C├ô HIß╗éN THß╗è Sß╗É QC ─É├â XEM ─Éß╗é CHß╗ÉNG GIAN Lß║¼N)
+          // RENDER DANH SÁCH ĐƠN RÚT (CÓ HIỂN THỊ SỐ QC ĐÃ XEM ĐỂ CHỐNG GIAN LẬN)
           if (data.withdrawals) {
             if (data.withdrawals.length === 0) {
-              container.innerHTML = '<p style="font-size: 12px; color: var(--subtext); text-align: center;">Ch╞░a c├│ ─æ╞ín ─æß╗òi th╞░ß╗ƒng n├áo.</p>';
+              container.innerHTML = '<p style="font-size: 12px; color: var(--subtext); text-align: center;">Chưa có đơn đổi thưởng nào.</p>';
             } else {
               let htmlOrders = '';
               data.withdrawals.forEach(o => {
                 const adCount = o.ads_watched || 0;
                 const isSafe = adCount >= 10;
                 const adBadge = isSafe 
-                  ? '<span style="color: var(--primary); font-weight: bold;">Γ£à ' + adCount + ' QC (Hß╗úp lß╗ç)</span>'
-                  : '<span style="color: var(--danger); font-weight: bold; background: rgba(255,77,77,0.15); padding: 2px 6px; border-radius: 4px;">ΓÜá∩╕Å Mß╗¢i xem ' + adCount + ' QC - Nghi vß║Ñn gian lß║¡n!</span>';
+                  ? '<span style="color: var(--primary); font-weight: bold;">✅ ' + adCount + ' QC (Hợp lệ)</span>'
+                  : '<span style="color: var(--danger); font-weight: bold; background: rgba(255,77,77,0.15); padding: 2px 6px; border-radius: 4px;">⚠️ Mới xem ' + adCount + ' QC - Nghi vấn gian lận!</span>';
 
                 htmlOrders += '<div class="admin-order-item" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">' +
                   '<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">' +
                     '<strong style="color: var(--accent);">#' + o.id + '</strong>' +
                     '<span class="admin-badge badge-pending" style="background: rgba(255,170,0,0.15); color: var(--fuel); padding: 3px 8px; border-radius: 4px; font-size: 11px;">' + o.status + '</span>' +
                   '</div>' +
-                  '<div style="font-size: 13px;">≡ƒæñ T├ái khoß║ún: <strong>' + o.username + '</strong></div>' +
-                  '<div style="font-size: 12px; margin: 4px 0;">≡ƒô║ L╞░ß╗út xem QC: ' + adBadge + '</div>' +
+                  '<div style="font-size: 13px;">👤 Tài khoản: <strong>' + o.username + '</strong></div>' +
+                  '<div style="font-size: 12px; margin: 4px 0;">📺 Lượt xem QC: ' + adBadge + '</div>' +
                   '<div style="font-size: 14px; font-weight: bold; color: var(--fuel); margin: 4px 0;">' +
-                    '≡ƒÆ░ Sß╗æ tiß╗ün r├║t: ' + o.amount.toLocaleString('vi-VN') + ' VN─É' +
+                    '💰 Số tiền rút: ' + o.amount.toLocaleString('vi-VN') + ' VNĐ' +
                   '</div>' +
                   '<div style="font-size: 12px; color: #ccc;">' +
-                    '≡ƒÆ│ K├¬nh: <strong>' + (o.method === 'NGAN_HANG' ? o.bankName : o.method) + '</strong>' +
+                    '💳 Kênh: <strong>' + (o.method === 'NGAN_HANG' ? o.bankName : o.method) + '</strong>' +
                   '</div>' +
                   '<div style="font-size: 13px; color: #fff; background: #000; padding: 6px; border-radius: 6px; margin: 6px 0;">' +
-                    'STK / S─ÉT: <strong style="color: var(--accent);">' + o.accountNumber + '</strong><br>' +
-                    'T├¬n: <strong>' + o.accountName + '</strong>' +
+                    'STK / SĐT: <strong style="color: var(--accent);">' + o.accountNumber + '</strong><br>' +
+                    'Tên: <strong>' + o.accountName + '</strong>' +
                   '</div>' +
-                  '<div style="font-size: 11px; color: var(--subtext);">ΓÅ░ ' + o.created_at + '</div>' +
+                  '<div style="font-size: 11px; color: var(--subtext);">⏰ ' + o.created_at + '</div>' +
                 '</div>';
               });
               container.innerHTML = htmlOrders;
             }
           }
 
-          // RENDER DANH S├üCH Tß║ñT Cß║ó NG╞»ß╗£I CH╞áI (CHß╗ÉNG GIAN Lß║¼N)
+          // RENDER DANH SÁCH TẤT CẢ NGƯỜI CHƠI (CHỐNG GIAN LẬN)
           if (usersContainer && data.users_list) {
             if (data.users_list.length === 0) {
-              usersContainer.innerHTML = '<p style="font-size: 12px; color: var(--subtext); text-align: center;">Ch╞░a c├│ ng╞░ß╗¥i ch╞íi n├áo.</p>';
+              usersContainer.innerHTML = '<p style="font-size: 12px; color: var(--subtext); text-align: center;">Chưa có người chơi nào.</p>';
             } else {
               let htmlUsers = '';
               data.users_list.forEach((u, idx) => {
@@ -793,12 +793,12 @@
                   '<div>' +
                     '<span style="color: #666; margin-right: 6px;">#' + (idx + 1) + '</span>' +
                     '<strong style="color: #fff;">' + u.username + '</strong>' +
-                    (isSuspicious ? ' <span style="color: var(--danger); font-size: 10px;">ΓÜá∩╕Å ß║óo?</span>' : '') +
-                    '<div style="font-size: 11px; color: var(--subtext);">Sß╗æ d╞░: ' + (u.balance || 0).toLocaleString('vi-VN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' VN─É</div>' +
+                    (isSuspicious ? ' <span style="color: var(--danger); font-size: 10px;">⚠️ Ảo?</span>' : '') +
+                    '<div style="font-size: 11px; color: var(--subtext);">Số dư: ' + (u.balance || 0).toLocaleString('vi-VN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' VNĐ</div>' +
                   '</div>' +
                   '<div style="text-align: right;">' +
                     '<div style="font-weight: bold; color: var(--primary); font-size: 13px;">' + ads + ' QC</div>' +
-                    '<div style="font-size: 10px; color: #666;">' + (ads >= 20 ? '≡ƒöÑ T├¡ch cß╗▒c' : (ads >= 5 ? 'B├¼nh th╞░ß╗¥ng' : 'Mß╗¢i')) + '</div>' +
+                    '<div style="font-size: 10px; color: #666;">' + (ads >= 20 ? '🔥 Tích cực' : (ads >= 5 ? 'Bình thường' : 'Mới')) + '</div>' +
                   '</div>' +
                 '</div>';
               });
@@ -807,7 +807,7 @@
           }
         }
       } catch (e) {
-        container.innerHTML = '<p style="color: var(--danger); font-size: 12px;">Lß╗ùi tß║úi danh s├ích quß║ún trß╗ï!</p>';
+        container.innerHTML = '<p style="color: var(--danger); font-size: 12px;">Lỗi tải danh sách quản trị!</p>';
       }
     }
 
@@ -818,17 +818,17 @@
         if (!currentAppVersion) {
           currentAppVersion = data.version;
         } else if (currentAppVersion !== data.version) {
-          console.log('[AUTO-UPDATE] Ph├ít hiß╗çn phi├¬n bß║ún mß╗¢i: ' + data.version + ' -> Tß╗▒ ─æß╗Öng nß║íp bß║ún mß╗¢i!');
-          // D├╣ng replace c├│ timestamp ─æß╗â ├⌐p tr├¼nh duyß╗çt Mini App x├│a sß║ích cache c┼⌐
+          console.log('[AUTO-UPDATE] Phát hiện phiên bản mới: ' + data.version + ' -> Tự động nạp bản mới!');
+          // Dùng replace có timestamp để ép trình duyệt Mini App xóa sạch cache cũ
           window.location.replace(window.location.pathname + '?_update=' + Date.now());
         }
       } catch (e) {}
     }
 
-    // Qu├⌐t ─æß╗ïnh kß╗│ mß╗ùi 15 gi├óy
+    // Quét định kỳ mỗi 15 giây
     setInterval(checkForUpdates, 15000);
 
-    // Qu├⌐t ngay khi ng╞░ß╗¥i ch╞íi mß╗ƒ lß║íi app tß╗½ chß║íy ngß║ºm
+    // Quét ngay khi người chơi mở lại app từ chạy ngầm
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         checkForUpdates();
